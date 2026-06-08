@@ -1,0 +1,25 @@
+spring:
+  profiles:
+    active: local
+
+  datasource:
+    url: ${spring.datasource.url}
+    username: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+    driver-class-name: ${spring.datasource.driver-class-name}
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+jwt:
+  secret: ${jwt.secret}
+  access-token-exp-seconds: ${jwt.access-token-exp-seconds}
+  refresh-token-exp-seconds: ${jwt.refresh-token-exp-seconds}
+
+file:
+  size: ${image.size}
+  upload.dir: ${file.upload.dir}
