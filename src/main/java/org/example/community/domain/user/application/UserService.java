@@ -9,10 +9,11 @@ import org.example.community.domain.post.comment.repository.CommentRepository;
 import org.example.community.domain.post.postLike.repository.PostLikeRepository;
 import org.example.community.domain.post.repository.PostRepository;
 import org.example.community.domain.user.User;
-import org.example.community.domain.user.api.dto.request.UserCreateRequestDto;
-import org.example.community.domain.user.api.dto.request.UserPasswordUpdateRequestDto;
-import org.example.community.domain.user.api.dto.response.UserInfoDto;
-import org.example.community.domain.user.api.dto.response.UserUpdateRequestDto;
+import org.example.community.domain.user.api.dto.request.UserCreateRequest;
+import org.example.community.domain.user.api.dto.request.UserPasswordUpdateRequest;
+import org.example.community.domain.user.api.dto.response.UserCreateResponse;
+import org.example.community.domain.user.api.dto.response.UserInfoResponse;
+import org.example.community.domain.user.api.dto.request.UserUpdateRequest;
 import org.example.community.domain.user.repository.UserRepository;
 import org.example.community.global.exception.CustomException;
 import org.example.community.global.exception.ErrorCode;
@@ -35,15 +36,15 @@ public class UserService {
 
     // 회원가입
     @Transactional
-    public void signup(UserCreateRequestDto userCreateRequestDto, MultipartFile profileImage) {
+    public UserCreateResponse signup(UserCreateRequest userCreateRequest, MultipartFile profileImage) {
         // 이메일 중복 검사
-        validateEmailDuplication(userCreateRequestDto.getEmail());
+        validateEmailDuplication(userCreateRequest.email());
 
         // 닉네임 중복 검사
-        validateNicknameDuplication(userCreateRequestDto.getNickname());
+        validateNicknameDuplication(userCreateRequest.nickname());
 
         // 비밀번호, 비밀번호 확인 검증
-        validatePassword(userCreateRequestDto.getPassword(), userCreateRequestDto.getCheckPassword());
+        validatePassword(userCreateRequest.password(), userCreateRequest.checkPassword());
 
         // 사진 있을 때만 업로드
         String profileImagePath = null;
@@ -53,13 +54,14 @@ public class UserService {
         }
 
         User user = User.builder()
-                .email(userCreateRequestDto.getEmail())
-                .password(userCreateRequestDto.getPassword())
-                .nickname(userCreateRequestDto.getNickname())
+                .email(userCreateRequest.email())
+                .password(userCreateRequest.password())
+                .nickname(userCreateRequest.nickname())
                 .profileImage(profileImagePath)
                 .build();
 
         userRepository.save(user);
+        return UserCreateResponse.from(user.getId());
     }
 
     // 회원탈퇴
@@ -90,22 +92,27 @@ public class UserService {
         }
     }
 
+    // 내 정보 조회 (/users/me)
+    public UserInfoResponse getMyInfo(Long loginUserId) {
+        return UserInfoResponse.from(findUserById(loginUserId));
+    }
+
     // 회원 정보 조회
-    public UserInfoDto getUserInfo(Long userId, Long loginUserId) {
+    public UserInfoResponse getUserInfo(Long userId, Long loginUserId) {
         validateLogin(userId, loginUserId);
-        return UserInfoDto.from(findUserById(userId));
+        return UserInfoResponse.from(findUserById(userId));
     }
 
     // 회원 정보 수정 - 닉네임, 프로필 사진
     @Transactional
-    public void updateUserInfo(Long userId, Long loginUserId, UserUpdateRequestDto userUpdateRequestDto,
+    public void updateUserInfo(Long userId, Long loginUserId, UserUpdateRequest userUpdateRequest,
                                MultipartFile profileImage) {
         validateLogin(userId, loginUserId);
 
         User user = findUserById(userId);
-        String nickname = (userUpdateRequestDto != null) ? userUpdateRequestDto.getNickname() : user.getNickname();
+        String nickname = (userUpdateRequest != null) ? userUpdateRequest.nickname() : user.getNickname();
 
-        if (userUpdateRequestDto != null && !nickname.equals(user.getNickname())) {
+        if (userUpdateRequest != null && !nickname.equals(user.getNickname())) {
             validateNicknameDuplication(nickname);
         }
 
@@ -122,12 +129,12 @@ public class UserService {
     // 회원 비밀번호 수정
     @Transactional
     public void updateUserPassword(Long userId, Long loginUserId,
-                                   UserPasswordUpdateRequestDto userPasswordUpdateRequestDto) {
+                                   UserPasswordUpdateRequest userPasswordUpdateRequest) {
         validateLogin(userId, loginUserId);
         User user = findUserById(userId);
-        matchPassword(user, userPasswordUpdateRequestDto.getCurrentPassword());
-        validatePassword(userPasswordUpdateRequestDto.getPassword(), userPasswordUpdateRequestDto.getCheckPassword());
-        user.updatePassword(userPasswordUpdateRequestDto.getPassword());
+        matchPassword(user, userPasswordUpdateRequest.currentPassword());
+        validatePassword(userPasswordUpdateRequest.password(), userPasswordUpdateRequest.checkPassword());
+        user.updatePassword(userPasswordUpdateRequest.password());
         userRepository.save(user);
     }
 
