@@ -5,19 +5,19 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.example.community.domain.post.Post;
+import org.example.community.domain.post.comment.Comment;
+import org.example.community.domain.post.comment.api.dto.request.CommentRequest;
+import org.example.community.domain.post.comment.api.dto.response.CommentDetailResponse;
+import org.example.community.domain.post.comment.api.dto.response.CommentPageResponse;
+import org.example.community.domain.post.comment.repository.CommentRepository;
 import org.example.community.domain.post.postStatus.PostStatus;
 import org.example.community.domain.post.postStatus.repository.PostStatusRepository;
-import org.example.community.global.page.CursorInfo;
-import org.example.community.domain.post.comment.Comment;
-import org.example.community.domain.post.comment.api.dto.CommentDetailResponse;
-import org.example.community.domain.post.comment.api.dto.CommentPageResponse;
-import org.example.community.domain.post.comment.api.dto.CommentRequestDto;
-import org.example.community.domain.post.comment.repository.CommentRepository;
 import org.example.community.domain.post.repository.PostRepository;
 import org.example.community.domain.user.User;
 import org.example.community.domain.user.repository.UserRepository;
 import org.example.community.global.exception.CustomException;
 import org.example.community.global.exception.ErrorCode;
+import org.example.community.global.page.CursorInfo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,13 +33,13 @@ public class CommentService {
 
     // 댓글 작성
     @Transactional
-    public void createComment(Long userId, Long postId, CommentRequestDto commentRequestDto) {
+    public Long createComment(Long userId, Long postId, CommentRequest commentRequest) {
         User user = findUserById(userId);
         Post post = findPostById(postId);
         PostStatus postStatus = findPostStatusByPostId(postId);
 
         Comment comment = Comment.builder()
-                .content(commentRequestDto.getContent())
+                .content(commentRequest.content())
                 .user(user)
                 .post(post)
                 .build();
@@ -48,6 +48,8 @@ public class CommentService {
         postStatus.increaseCommentCount();
 
         postStatusRepository.save(postStatus);
+
+        return comment.getId();
     }
 
     // 댓글 조회
@@ -79,8 +81,8 @@ public class CommentService {
                 result.get(result.size() - 1).getId())
                 : null;
 
-        return CommentPageResponse.builder()
-                .comments(result.stream()
+        return CommentPageResponse.of(
+                result.stream()
                         .map(comment -> CommentDetailResponse.from(
                                 comment,
                                 // comment.getUser()가 이미 로딩된 상태 — 추가 쿼리 없음
@@ -88,18 +90,18 @@ public class CommentService {
                                         ? comment.getUser().getNickname()
                                         : "탈퇴한 사용자"
                         ))
-                        .toList())
-                .nextCursor(nextCursor)
-                .hasNext(hasNext)
-                .build();
+                        .toList(),
+                nextCursor,
+                hasNext
+        );
     }
 
     // 댓글 수정
     @Transactional
-    public void updateComment(Long userId, Long postId, Long commentId, CommentRequestDto commentRequestDto) {
+    public void updateComment(Long userId, Long postId, Long commentId, CommentRequest commentRequest) {
         Comment comment = findAndValidate(userId, postId, commentId);
 
-        comment.update(commentRequestDto.getContent());
+        comment.update(commentRequest.content());
         commentRepository.save(comment);
     }
 
@@ -135,18 +137,17 @@ public class CommentService {
     }
 
     private boolean isAfterCursor(Comment comment, CursorInfo cursorInfo, String sort) {
-        if (cursorInfo == null)
+        if (cursorInfo == null) {
             return true;
+        }
 
         return switch (sort) {
-            case "latest" ->
-            comment.getCreatedAt().isBefore(cursorInfo.getCreatedAt()) ||
+            case "latest" -> comment.getCreatedAt().isBefore(cursorInfo.getCreatedAt()) ||
                     (comment.getCreatedAt().isEqual(cursorInfo.getCreatedAt()) &&
                             comment.getId() < cursorInfo.getId());
-            case "oldest" ->
-                comment.getCreatedAt().isAfter(cursorInfo.getCreatedAt()) ||
-                        (comment.getCreatedAt().isEqual(cursorInfo.getCreatedAt()) &&
-                                comment.getId() > cursorInfo.getId());
+            case "oldest" -> comment.getCreatedAt().isAfter(cursorInfo.getCreatedAt()) ||
+                    (comment.getCreatedAt().isEqual(cursorInfo.getCreatedAt()) &&
+                            comment.getId() > cursorInfo.getId());
             default -> throw new CustomException(ErrorCode.INVALID_SORT);
         };
     }

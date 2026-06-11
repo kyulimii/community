@@ -6,7 +6,8 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.example.community.domain.image.application.FileService;
 import org.example.community.domain.post.Post;
-import org.example.community.domain.post.api.dto.request.PostRequestDto;
+import org.example.community.domain.post.api.dto.request.PostRequest;
+import org.example.community.domain.post.api.dto.response.PostCreateResponse;
 import org.example.community.domain.post.api.dto.response.PostDetailResponse;
 import org.example.community.domain.post.api.dto.response.PostListResponse;
 import org.example.community.domain.post.api.dto.response.PostPageResponse;
@@ -43,8 +44,8 @@ public class PostService {
 
     // 게시글 작성
     @Transactional
-    public void createPost(Long userId, PostRequestDto postRequestDto,
-                           MultipartFile postImage) {
+    public Long createPost(Long userId, PostRequest postRequest,
+                                         MultipartFile postImage) {
         User user = findUserById(userId);
 
         String image = (postImage != null && !postImage.isEmpty())
@@ -52,8 +53,8 @@ public class PostService {
                 : null;
 
         Post post = Post.builder()
-                .title(postRequestDto.getTitle())
-                .content(postRequestDto.getContent())
+                .title(postRequest.title())
+                .content(postRequest.content())
                 .postImage(image)
                 .user(user)
                 .build();
@@ -63,6 +64,9 @@ public class PostService {
                 .post(post)
                 .build();
         postStatusRepository.save(postStatus);
+
+        return post.getId();
+//        return PostCreateResponse.from(post.getId());
     }
 
     // 최초 요청: GET /posts?sort=latest&limit=10
@@ -107,13 +111,13 @@ public class PostService {
                 : CursorInfo.encode(result.get(result.size() - 1).getCreatedAt(), result.get(result.size() - 1).getId())
                 : null;
 
-        return PostPageResponse.builder()
-                .posts(result.stream()
+        return PostPageResponse.of(
+                result.stream()
                         .map(post -> PostListResponse.of(post, findPostStatusByPostId(post.getId())))
-                        .toList())
-                .nextCursor(nextCursor)
-                .hasNext(hasNext)
-                .build();
+                        .toList(),
+                nextCursor,
+                hasNext
+        );
     }
 
     // 게시글 상세 조회
@@ -128,7 +132,7 @@ public class PostService {
 
     // 게시글 수정
     @Transactional
-    public void updatePost(Long userId, Long postId, PostRequestDto postRequestDto,
+    public void updatePost(Long userId, Long postId, PostRequest postRequest,
                            MultipartFile postImage) {
         Post post = findPostById(postId);
 
@@ -140,7 +144,7 @@ public class PostService {
                 ? fileService.uploadFile(postImage)
                 : post.getPostImage();
 
-        post.update(postRequestDto.getTitle(), postRequestDto.getContent(), image);
+        post.update(postRequest.title(), postRequest.content(), image);
         postRepository.save(post);
     }
 

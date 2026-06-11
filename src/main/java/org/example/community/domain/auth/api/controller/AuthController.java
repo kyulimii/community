@@ -3,14 +3,16 @@ package org.example.community.domain.auth.api.controller;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.example.community.domain.auth.api.dto.request.LoginRequestDto;
-import org.example.community.domain.auth.api.dto.response.LoginResponse;
+import org.example.community.domain.auth.api.dto.request.AuthRequest;
+import org.example.community.domain.auth.api.dto.response.AuthResponse;
 import org.example.community.domain.auth.application.AuthService;
 import org.example.community.domain.auth.application.LoginResult;
 import org.example.community.global.config.JwtProperties;
+import org.example.community.global.exception.CustomException;
+import org.example.community.global.exception.ErrorCode;
 import org.example.community.global.jwt.TokenInfo;
+import org.example.community.global.response.ApiResponse;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -30,14 +32,14 @@ public class AuthController {
 
     // 로그인
     @PostMapping
-    public ResponseEntity<LoginResponse> login(
-            @Valid @RequestBody LoginRequestDto loginRequest,
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid @RequestBody AuthRequest loginRequest,
             HttpServletResponse httpResponse
     ) {
-        LoginResult result = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
+        LoginResult result = authService.login(loginRequest.email(), loginRequest.password());
 
         ResponseCookie refreshCookie = ResponseCookie
-                .from("refreshToken", result.getRefreshToken())
+                .from("refreshToken", result.refreshToken())
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
@@ -47,17 +49,18 @@ public class AuthController {
 
         httpResponse.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
-        return ResponseEntity.ok(result.getResponse());
+        return ResponseEntity
+                .ok(ApiResponse.ok(result.response()));
     }
 
     // 로그아웃
     @DeleteMapping
-    public ResponseEntity<Void> logout(
+    public ResponseEntity<ApiResponse<Void>> logout(
             @CookieValue(value = "refreshToken", required = false) String refreshToken,
             HttpServletResponse httpResponse
     ) {
         if (refreshToken == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new CustomException(ErrorCode.INVALID_TOKEN);
         }
 
         authService.logout(refreshToken);
@@ -73,18 +76,20 @@ public class AuthController {
 
         httpResponse.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
 
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        return ResponseEntity
+                .ok(ApiResponse.ok(null));
     }
 
     // 토큰 재발급
     @PostMapping("/refresh")
-    public ResponseEntity<TokenInfo> refresh(
+    public ResponseEntity<ApiResponse<TokenInfo>> refresh(
             @CookieValue(value = "refreshToken", required = false) String refreshToken
     ) {
         if (refreshToken == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new CustomException(ErrorCode.INVALID_TOKEN);
         }
 
-        return ResponseEntity.ok(authService.refresh(refreshToken));
+        return ResponseEntity
+                .ok(ApiResponse.ok(authService.refresh(refreshToken)));
     }
 }

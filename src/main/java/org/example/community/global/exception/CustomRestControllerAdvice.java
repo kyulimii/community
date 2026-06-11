@@ -13,21 +13,25 @@ public class CustomRestControllerAdvice {
 
     // @Valid 처리
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> responseValidation(MethodArgumentNotValidException e) {
-        Map<String, String> error = new HashMap<>();
+    public ResponseEntity<ApiErrorResponse> responseValidation(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(FieldError::getDefaultMessage)
+                .findFirst()
+                .orElse("유효하지 않은 입력입니다.");
 
-        e.getAllErrors().forEach(
-                // 필드와 메시지 반환
-                c -> error.put(((FieldError) c).getField(), c.getDefaultMessage())
-        );
-        return ResponseEntity.badRequest().body(error);
+        return ResponseEntity
+                .badRequest()
+                        .body(ApiErrorResponse.of(message));
     }
 
     // CustomException 처리
     @ExceptionHandler(CustomException.class)
-    public ResponseEntity<Map<String, String>> handleCustomException(CustomException e) {
-        Map<String, String> error = new HashMap<>();
-        error.put("message", e.getErrorCode().getMessage());
-        return ResponseEntity.status(e.getErrorCode().getHttpStatus()).body(error);
+    public ResponseEntity<ApiErrorResponse> handleCustomException(CustomException e) {
+
+        return ResponseEntity
+                .status(e.getErrorCode().getHttpStatus())
+                .body(ApiErrorResponse.of(e.getErrorCode().getMessage()));
     }
 }

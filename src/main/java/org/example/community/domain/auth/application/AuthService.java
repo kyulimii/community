@@ -3,16 +3,16 @@ package org.example.community.domain.auth.application;
 import io.jsonwebtoken.Claims;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
-import org.example.community.domain.auth.api.dto.response.LoginResponse;
-import org.example.community.domain.user.api.dto.response.UserInfoDto;
+import org.example.community.domain.auth.RefreshToken;
+import org.example.community.domain.auth.api.dto.response.AuthResponse;
+import org.example.community.domain.auth.repository.RefreshTokenRepository;
+import org.example.community.domain.user.User;
+import org.example.community.domain.user.api.dto.response.UserInfoResponse;
+import org.example.community.domain.user.repository.UserRepository;
 import org.example.community.global.config.JwtProperties;
 import org.example.community.global.exception.CustomException;
 import org.example.community.global.exception.ErrorCode;
-import org.example.community.domain.user.User;
-import org.example.community.domain.user.repository.UserRepository;
 import org.example.community.global.jwt.JwtProvider;
-import org.example.community.domain.auth.RefreshToken;
-import org.example.community.domain.auth.repository.RefreshTokenRepository;
 import org.example.community.global.jwt.TokenInfo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,8 +52,8 @@ public class AuthService {
         );
 
         return new LoginResult(
-                LoginResponse.of(
-                        UserInfoDto.from(user),
+                AuthResponse.of(
+                        UserInfoResponse.from(user),
                         accessToken,
                         jwtProvider.getAccessTokenValidityInMilliseconds()
                 ),

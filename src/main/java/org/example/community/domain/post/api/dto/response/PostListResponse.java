@@ -1,22 +1,19 @@
 package org.example.community.domain.post.api.dto.response;
 
 import java.time.LocalDateTime;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import org.example.community.domain.post.Post;
 import org.example.community.domain.post.postStatus.PostStatus;
 
-@Getter
-@AllArgsConstructor
-public class PostListResponse {
-    // content, postImage 제외
-    private Long id;
-    private String title;
-    private Long authorId;
-    private int likeCount;
-    private int viewCount;
-    private int commentCount;
-    private LocalDateTime createdAt;
+public record PostListResponse(
+        // content, postImage 제외
+        Long id,
+        String title,
+        Long authorId,
+        int likeCount,
+        int viewCount,
+        int commentCount,
+        LocalDateTime createdAt
+) {
 
     public static PostListResponse of(Post post, PostStatus postStatus) {
         return new PostListResponse(
