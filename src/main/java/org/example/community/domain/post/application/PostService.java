@@ -44,7 +44,7 @@ public class PostService {
 
     // 게시글 작성
     @Transactional
-    public PostCreateResponse createPost(Long userId, PostRequest postRequest,
+    public Long createPost(Long userId, PostRequest postRequest,
                                          MultipartFile postImage) {
         User user = findUserById(userId);
 
@@ -65,7 +65,8 @@ public class PostService {
                 .build();
         postStatusRepository.save(postStatus);
 
-        return PostCreateResponse.from(post.getId());
+        return post.getId();
+//        return PostCreateResponse.from(post.getId());
     }
 
     // 최초 요청: GET /posts?sort=latest&limit=10

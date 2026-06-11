@@ -36,7 +36,7 @@ public class UserService {
 
     // 회원가입
     @Transactional
-    public UserCreateResponse signup(UserCreateRequest userCreateRequest, MultipartFile profileImage) {
+    public Long signup(UserCreateRequest userCreateRequest, MultipartFile profileImage) {
         // 이메일 중복 검사
         validateEmailDuplication(userCreateRequest.email());
 
@@ -61,7 +61,7 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
-        return UserCreateResponse.from(user.getId());
+        return user.getId();
     }
 
     // 회원탈퇴

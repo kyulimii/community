@@ -14,6 +14,7 @@ import org.example.community.global.jwt.TokenInfo;
 import org.example.community.global.response.ApiResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,7 +32,7 @@ public class AuthController {
 
     // 로그인
     @PostMapping
-    public ApiResponse<AuthResponse> login(
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody AuthRequest loginRequest,
             HttpServletResponse httpResponse
     ) {
@@ -48,17 +49,18 @@ public class AuthController {
 
         httpResponse.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
-        return ApiResponse.ok(result.response());
+        return ResponseEntity
+                .ok(ApiResponse.ok(result.response()));
     }
 
     // 로그아웃
     @DeleteMapping
-    public ApiResponse<Void> logout(
+    public ResponseEntity<ApiResponse<Void>> logout(
             @CookieValue(value = "refreshToken", required = false) String refreshToken,
             HttpServletResponse httpResponse
     ) {
         if (refreshToken == null) {
-            return ApiResponse.fail(new CustomException(ErrorCode.INVALID_TOKEN));
+            throw new CustomException(ErrorCode.INVALID_TOKEN);
         }
 
         authService.logout(refreshToken);
@@ -74,18 +76,20 @@ public class AuthController {
 
         httpResponse.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
 
-        return ApiResponse.ok(null);
+        return ResponseEntity
+                .ok(ApiResponse.ok(null));
     }
 
     // 토큰 재발급
     @PostMapping("/refresh")
-    public ApiResponse<TokenInfo> refresh(
+    public ResponseEntity<ApiResponse<TokenInfo>> refresh(
             @CookieValue(value = "refreshToken", required = false) String refreshToken
     ) {
         if (refreshToken == null) {
-            return ApiResponse.fail(new CustomException(ErrorCode.INVALID_TOKEN));
+            throw new CustomException(ErrorCode.INVALID_TOKEN);
         }
 
-        return ApiResponse.ok(authService.refresh(refreshToken));
+        return ResponseEntity
+                .ok(ApiResponse.ok(authService.refresh(refreshToken)));
     }
 }
