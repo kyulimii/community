@@ -3,23 +3,21 @@ package org.example.community.domain.user.application;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.example.community.domain.auth.repository.RefreshTokenRepository;
-import org.example.community.domain.image.application.ImageValidator;
-import org.example.community.domain.image.application.FileService;
+import org.example.community.domain.image.Image;
+import org.example.community.domain.image.repository.ImageRepository;
 import org.example.community.domain.post.comment.repository.CommentRepository;
 import org.example.community.domain.post.postLike.repository.PostLikeRepository;
 import org.example.community.domain.post.repository.PostRepository;
 import org.example.community.domain.user.User;
 import org.example.community.domain.user.api.dto.request.UserCreateRequest;
 import org.example.community.domain.user.api.dto.request.UserPasswordUpdateRequest;
-import org.example.community.domain.user.api.dto.response.UserCreateResponse;
-import org.example.community.domain.user.api.dto.response.UserInfoResponse;
 import org.example.community.domain.user.api.dto.request.UserUpdateRequest;
+import org.example.community.domain.user.api.dto.response.UserInfoResponse;
 import org.example.community.domain.user.repository.UserRepository;
 import org.example.community.global.exception.CustomException;
 import org.example.community.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -27,16 +25,15 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final ImageValidator imageValidator;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final FileService fileService;
+    private final ImageRepository imageRepository;
 
     // 회원가입
     @Transactional
-    public Long signup(UserCreateRequest userCreateRequest, MultipartFile profileImage) {
+    public Long signup(UserCreateRequest userCreateRequest) {
         // 이메일 중복 검사
         validateEmailDuplication(userCreateRequest.email());
 
@@ -47,17 +44,22 @@ public class UserService {
         validatePassword(userCreateRequest.password(), userCreateRequest.checkPassword());
 
         // 사진 있을 때만 업로드
-        String profileImagePath = null;
-        if (profileImage != null && !profileImage.isEmpty()) {
-            imageValidator.validate(profileImage);
-            profileImagePath = fileService.uploadFile(profileImage);
-        }
+//        String profileImagePath = null;
+//        if (profileImage != null && !profileImage.isEmpty()) {
+//            imageValidator.validate(profileImage);
+//            profileImagePath = fileService.uploadFile(profileImage);
+//        }
+
+        Image image = imageRepository.findByJpgPath(userCreateRequest.profileImage())
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+
+        image.updateImageType("USER");
 
         User user = User.builder()
                 .email(userCreateRequest.email())
                 .password(userCreateRequest.password())
                 .nickname(userCreateRequest.nickname())
-                .profileImage(profileImagePath)
+                .profileImage(userCreateRequest.profileImage())
                 .build();
 
         userRepository.save(user);
@@ -105,8 +107,7 @@ public class UserService {
 
     // 회원 정보 수정 - 닉네임, 프로필 사진
     @Transactional
-    public void updateUserInfo(Long userId, Long loginUserId, UserUpdateRequest userUpdateRequest,
-                               MultipartFile profileImage) {
+    public void updateUserInfo(Long userId, Long loginUserId, UserUpdateRequest userUpdateRequest) {
         validateLogin(userId, loginUserId);
 
         User user = findUserById(userId);
@@ -116,13 +117,13 @@ public class UserService {
             validateNicknameDuplication(nickname);
         }
 
-        String imageUrl = user.getProfileImage();
-        if (profileImage != null && !profileImage.isEmpty()) {
-            imageValidator.validate(profileImage);
-            imageUrl = fileService.uploadFile(profileImage);
-        }
+//        String imageUrl = user.getProfileImage();
+//        if (profileImage != null && !profileImage.isEmpty()) {
+//            imageValidator.validate(profileImage);
+//            imageUrl = fileService.uploadFile(profileImage);
+//        }
 
-        user.updateUserInfo(nickname, imageUrl);
+        user.updateUserInfo(nickname, userUpdateRequest.profileImage());
         userRepository.save(user);
     }
 

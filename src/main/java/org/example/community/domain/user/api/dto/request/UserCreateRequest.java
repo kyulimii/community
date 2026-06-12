@@ -32,6 +32,8 @@ public record UserCreateRequest(
                 regexp = ConstraintConstants.NICKNAME_FORMAT,
                 message = ConstraintConstants.NICKNAME_FORMAT_MESSAGE
         )
-        String nickname
+        String nickname,
+
+        String profileImage
 ) {
 }
