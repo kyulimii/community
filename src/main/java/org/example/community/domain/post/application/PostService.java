@@ -4,29 +4,27 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
-import org.example.community.domain.image.application.FileService;
+import org.example.community.domain.image.Image;
+import org.example.community.domain.image.repository.ImageRepository;
 import org.example.community.domain.post.Post;
 import org.example.community.domain.post.api.dto.request.PostRequest;
-import org.example.community.domain.post.api.dto.response.PostCreateResponse;
 import org.example.community.domain.post.api.dto.response.PostDetailResponse;
 import org.example.community.domain.post.api.dto.response.PostListResponse;
 import org.example.community.domain.post.api.dto.response.PostPageResponse;
 import org.example.community.domain.post.comment.repository.CommentRepository;
 import org.example.community.domain.post.postLike.PostLike;
+import org.example.community.domain.post.postLike.repository.PostLikeRepository;
 import org.example.community.domain.post.postStatus.PostStatus;
 import org.example.community.domain.post.postStatus.ViewCountBuffer;
 import org.example.community.domain.post.postStatus.repository.PostStatusRepository;
-import org.example.community.domain.post.postLike.repository.PostLikeRepository;
 import org.example.community.domain.post.repository.PostRepository;
 import org.example.community.domain.user.User;
 import org.example.community.domain.user.repository.UserRepository;
-import org.example.community.global.page.CursorInfo;
-import org.example.community.domain.image.application.ImageValidator;
 import org.example.community.global.exception.CustomException;
 import org.example.community.global.exception.ErrorCode;
+import org.example.community.global.page.CursorInfo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -36,26 +34,28 @@ public class PostService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
-    private final ImageValidator imageValidator;
     private final UserRepository userRepository;
     private final PostStatusRepository postStatusRepository;
     private final ViewCountBuffer viewCountBuffer;
-    private final FileService fileService;
+    private final ImageRepository imageRepository;
 
     // 게시글 작성
     @Transactional
-    public Long createPost(Long userId, PostRequest postRequest,
-                                         MultipartFile postImage) {
+    public Long createPost(Long userId, PostRequest postRequest) {
         User user = findUserById(userId);
 
-        String image = (postImage != null && !postImage.isEmpty())
-                ? fileService.uploadFile(postImage)
-                : null;
+//        String image = (postImage != null && !postImage.isEmpty())
+//                ? fileService.uploadFile(postImage)
+//                : null;
 
+        Image image = imageRepository.findByJpgPath(postRequest.postImage())
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+
+        image.updateImageType("POST");
         Post post = Post.builder()
                 .title(postRequest.title())
                 .content(postRequest.content())
-                .postImage(image)
+                .postImage(postRequest.postImage())
                 .user(user)
                 .build();
         postRepository.save(post);
@@ -66,7 +66,6 @@ public class PostService {
         postStatusRepository.save(postStatus);
 
         return post.getId();
-//        return PostCreateResponse.from(post.getId());
     }
 
     // 최초 요청: GET /posts?sort=latest&limit=10
@@ -132,19 +131,18 @@ public class PostService {
 
     // 게시글 수정
     @Transactional
-    public void updatePost(Long userId, Long postId, PostRequest postRequest,
-                           MultipartFile postImage) {
+    public void updatePost(Long userId, Long postId, PostRequest postRequest) {
         Post post = findPostById(postId);
 
         if (!Objects.equals(post.getUser().getId(), userId)) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        String image = (postImage != null && !postImage.isEmpty())
-                ? fileService.uploadFile(postImage)
-                : post.getPostImage();
+//        String image = (postImage != null && !postImage.isEmpty())
+//                ? fileService.uploadFile(postImage)
+//                : post.getPostImage();
 
-        post.update(postRequest.title(), postRequest.content(), image);
+        post.update(postRequest.title(), postRequest.content(), postRequest.postImage());
         postRepository.save(post);
     }
 

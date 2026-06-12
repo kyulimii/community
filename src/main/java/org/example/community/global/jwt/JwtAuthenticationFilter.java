@@ -42,6 +42,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return true;
         }
 
+        if (uri.startsWith("/uploads") && method.equals("POST")) {
+            return true;
+        }
+
         return false;
     }
 

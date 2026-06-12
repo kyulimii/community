@@ -10,7 +10,6 @@ import org.example.community.domain.user.api.dto.response.UserInfoResponse;
 import org.example.community.domain.user.application.UserService;
 import org.example.community.global.resolver.LoginUser;
 import org.example.community.global.response.ApiResponse;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,9 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
@@ -32,11 +29,10 @@ public class UserController {
     private final UserService userService;
 
     // 회원가입
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping
     public ResponseEntity<ApiResponse<Void>> signup(
-            @RequestPart("userInfo") @Valid UserCreateRequest userCreateRequest,
-            @RequestPart("profileImage") MultipartFile profileImage) {
-        Long id = userService.signup(userCreateRequest, profileImage);
+            @RequestBody @Valid UserCreateRequest userCreateRequest) {
+        Long id = userService.signup(userCreateRequest);
         return ResponseEntity
                 .created(URI.create("/users/" + id))
                 .body(ApiResponse.created(null));
@@ -82,12 +78,11 @@ public class UserController {
     }
 
     // 회원 정보 수정 - 닉네임, 프로필 사진
-    @PatchMapping(value = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PatchMapping( "/{userId}")
     public ResponseEntity<ApiResponse<Void>> updateUserInfo(@PathVariable Long userId,
                                                             @LoginUser Long loginUserId,
-                                                            @RequestPart(value = "nickname", required = false) @Valid UserUpdateRequest userUpdateRequest,
-                                                            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
-        userService.updateUserInfo(userId, loginUserId, userUpdateRequest, profileImage);
+                                                            @RequestBody @Valid UserUpdateRequest userUpdateRequest) {
+        userService.updateUserInfo(userId, loginUserId, userUpdateRequest);
         return ResponseEntity
                 .ok(ApiResponse.ok(null));
     }

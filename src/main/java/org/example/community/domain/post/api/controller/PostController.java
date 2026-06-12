@@ -9,18 +9,16 @@ import org.example.community.domain.post.api.dto.response.PostPageResponse;
 import org.example.community.domain.post.application.PostService;
 import org.example.community.global.resolver.LoginUser;
 import org.example.community.global.response.ApiResponse;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
@@ -30,13 +28,12 @@ public class PostController {
     private final PostService postService;
 
     // 게시글 작성
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping
     public ResponseEntity<ApiResponse<Void>> createPost(
             @LoginUser Long loginUserId,
-            @RequestPart("post") @Valid PostRequest postRequest,
-            @RequestPart(value = "postImage", required = false) MultipartFile postImage
+            @RequestBody @Valid PostRequest postRequest
     ) {
-        Long id = postService.createPost(loginUserId, postRequest, postImage);
+        Long id = postService.createPost(loginUserId, postRequest);
         return ResponseEntity
                 .created(URI.create("/posts/" + id))
                 .body(ApiResponse.created(null));
@@ -61,14 +58,13 @@ public class PostController {
     }
 
     // 게시글 수정
-    @PatchMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PatchMapping("/{postId}")
     public ResponseEntity<ApiResponse<Void>> updatePost(
             @LoginUser Long loginUserId,
             @PathVariable Long postId,
-            @RequestPart(value = "post", required = false) @Valid PostRequest postRequest,
-            @RequestPart(value = "postImage", required = false) MultipartFile postImage
+            @RequestBody @Valid PostRequest postRequest
     ) {
-        postService.updatePost(loginUserId, postId, postRequest, postImage);
+        postService.updatePost(loginUserId, postId, postRequest);
         return ResponseEntity
                 .ok(ApiResponse.ok(null));
     }
