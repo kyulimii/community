@@ -14,6 +14,6 @@ public record UserUpdateRequest(
         )
         String nickname,
 
-        Long imageId
+        String profileImage
 ) {
 }

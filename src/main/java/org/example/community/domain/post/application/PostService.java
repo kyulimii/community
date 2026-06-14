@@ -3,9 +3,9 @@ package org.example.community.domain.post.application;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
-import org.example.community.domain.image.Image;
-import org.example.community.domain.image.application.ImageService;
-import org.example.community.domain.image.repository.ImageRepository;
+import org.example.community.domain.image.PostImage;
+import org.example.community.domain.image.application.PostImageService;
+import org.example.community.domain.image.repository.PostImageRepository;
 import org.example.community.domain.post.Post;
 import org.example.community.domain.post.api.dto.request.PostRequest;
 import org.example.community.domain.post.api.dto.response.PostDetailResponse;
@@ -38,26 +38,25 @@ public class PostService {
     private final UserRepository userRepository;
     private final PostStatusRepository postStatusRepository;
     private final ViewCountBuffer viewCountBuffer;
-    private final ImageRepository imageRepository;
-    private final ImageService imageService;
+    private final PostImageRepository postImageRepository;
+    private final PostImageService imageService;
 
     // 게시글 작성
     @Transactional
     public Long createPost(Long userId, PostRequest postRequest) {
         User user = findUserById(userId);
 
-        Image image = imageRepository.findById(postRequest.imageId())
+        PostImage postImage = postImageRepository.findByJpgPath(postRequest.postImage())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
-
-        image.updateImageType("POST");
 
         Post post = Post.builder()
                 .title(postRequest.title())
                 .content(postRequest.content())
-                .postImage(image.getJpgPath())
+                .postImage(postRequest.postImage())
                 .user(user)
                 .build();
         postRepository.save(post);
+        postImage.assignToPost(post);
 
         PostStatus postStatus = PostStatus.builder()
                 .post(post)
@@ -72,13 +71,11 @@ public class PostService {
     // 게시글 목록 조회
     public PostPageResponse getPosts(String sort, String cursor, int limit) {
 
-        // cursor 파싱 (최초 요청이면 null)
         CursorInfo cursorInfo = CursorInfo.from(cursor, sort);
         List<PostWithStatus> posts = postRepository.findPostsWithCursor(sort, cursorInfo, limit + 1);
 
-        // 다음 페이지 존재 여부 확인
         boolean hasNext = posts.size() > limit;
-        List<PostWithStatus> result = hasNext ? posts.subList(0, limit) : posts; // List<E> subList(int fromIndex, int toIndex);
+        List<PostWithStatus> result = hasNext ? posts.subList(0, limit) : posts;
 
         String nextCursor = hasNext
                 ? sort.equals("popular")
@@ -118,15 +115,11 @@ public class PostService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        Image image = imageRepository.findById(postRequest.imageId())
+        imageService.deleteImage(post.getPostImage());
+        PostImage newImage = postImageRepository.findByJpgPath(postRequest.postImage())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
 
-        if (image.getImageType() != null) {
-            throw new CustomException(ErrorCode.IMAGE_UPLOAD_FAILED);
-        }
-        post.update(postRequest.title(), postRequest.content(), image.getJpgPath());
-        image.updateImageType("POST");
-
+        post.update(postRequest.title(), postRequest.content(), postRequest.postImage());
         postRepository.save(post);
     }
 

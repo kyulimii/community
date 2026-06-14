@@ -3,9 +3,9 @@ package org.example.community.domain.user.application;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.example.community.domain.auth.repository.RefreshTokenRepository;
-import org.example.community.domain.image.Image;
-import org.example.community.domain.image.application.ImageService;
-import org.example.community.domain.image.repository.ImageRepository;
+import org.example.community.domain.image.ProfileImage;
+import org.example.community.domain.image.application.ProfileImageService;
+import org.example.community.domain.image.repository.ProfileImageRepository;
 import org.example.community.domain.post.comment.repository.CommentRepository;
 import org.example.community.domain.post.postLike.repository.PostLikeRepository;
 import org.example.community.domain.post.repository.PostRepository;
@@ -31,33 +31,28 @@ public class UserService {
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final ImageRepository imageRepository;
-    private final ImageService imageService;
+    private final ProfileImageRepository profileImageRepository;
+    private final ProfileImageService profileImageService;
     private final PasswordEncoder passwordEncoder;
 
     // 회원가입
     @Transactional
     public Long signup(UserCreateRequest userCreateRequest) {
-        // 이메일 중복 검사
         validateEmailDuplication(userCreateRequest.email());
-
-        // 닉네임 중복 검사
         validateNicknameDuplication(userCreateRequest.nickname());
-
-        // 비밀번호, 비밀번호 확인 검증
         validatePassword(userCreateRequest.password(), userCreateRequest.checkPassword());
 
-        Image image = imageRepository.findById(userCreateRequest.imageId())
+        ProfileImage profileImage = profileImageRepository
+                .findByJpgPath(userCreateRequest.profileImage())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
-
-        image.updateImageType("USER");
 
         User user = User.builder()
                 .email(userCreateRequest.email())
                 .password(passwordEncoder.encode(userCreateRequest.password()))
                 .nickname(userCreateRequest.nickname())
-                .profileImage(image.getJpgPath())
+                .profileImage(userCreateRequest.profileImage())
                 .build();
+        profileImage.assignToUser(user);
 
         userRepository.save(user);
         return user.getId();
@@ -66,15 +61,13 @@ public class UserService {
     // 회원탈퇴
     @Transactional
     public void deleteUser(Long loginUserId) {
-        findUserById(loginUserId);
         User user = findUserById(loginUserId);
 
-        // 회원과 연결된 객체 삭제
         postRepository.deleteByUserId(loginUserId);
         commentRepository.deleteByUserId(loginUserId);
         postLikeRepository.deleteByUserId(loginUserId);
         refreshTokenRepository.deleteByUserId(loginUserId);
-        imageService.deleteImage(user.getProfileImage());
+        profileImageService.deleteImage(user.getProfileImage());
 
         userRepository.deleteById(loginUserId);
     }
@@ -110,21 +103,18 @@ public class UserService {
         validateLogin(userId, loginUserId);
 
         User user = findUserById(userId);
-        String nickname = (userUpdateRequest != null) ? userUpdateRequest.nickname() : user.getNickname();
+        String nickname = userUpdateRequest.nickname();
 
-        if (userUpdateRequest != null && !nickname.equals(user.getNickname())) {
+        if (!nickname.equals(user.getNickname())) {
             validateNicknameDuplication(nickname);
         }
 
-        Image image = imageRepository.findById(userUpdateRequest.imageId())
+        profileImageService.deleteImage(user.getProfileImage());
+        ProfileImage newImage = profileImageRepository.findByJpgPath(userUpdateRequest.profileImage())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+        newImage.assignToUser(user);
 
-        if (image.getImageType() != null) {
-            throw new CustomException(ErrorCode.IMAGE_UPLOAD_FAILED);
-        }
-        user.updateUserInfo(nickname, image.getJpgPath());
-        image.updateImageType("USER");
-
+        user.updateUserInfo(nickname, userUpdateRequest.profileImage());
         userRepository.save(user);
     }
 
