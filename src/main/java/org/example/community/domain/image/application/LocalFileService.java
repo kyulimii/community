@@ -7,8 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.example.community.domain.image.Image;
-import org.example.community.domain.image.repository.ImageRepository;
+import org.example.community.domain.image.repository.PostImageRepository;
 import org.example.community.global.exception.CustomException;
 import org.example.community.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +17,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LocalFileService implements FileService {
 
-    private final ImageRepository imageRepository;
+    private final PostImageRepository postImageRepository;
 
     @Value("${file.upload.dir}")
     private String uploadDir;
