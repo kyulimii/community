@@ -52,9 +52,9 @@ public class PostController {
 
     // 게시글 상세 조회
     @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponse<PostDetailResponse>> getPost(@PathVariable Long postId) {
+    public ResponseEntity<ApiResponse<PostDetailResponse>> getPostDetail(@PathVariable Long postId) {
         return ResponseEntity
-                .ok(ApiResponse.ok(postService.getPost(postId)));
+                .ok(ApiResponse.ok(postService.getPostDetail(postId)));
     }
 
     // 게시글 수정

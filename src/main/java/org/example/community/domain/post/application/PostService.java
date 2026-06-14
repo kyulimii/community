@@ -1,6 +1,5 @@
 package org.example.community.domain.post.application;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +11,7 @@ import org.example.community.domain.post.api.dto.request.PostRequest;
 import org.example.community.domain.post.api.dto.response.PostDetailResponse;
 import org.example.community.domain.post.api.dto.response.PostListResponse;
 import org.example.community.domain.post.api.dto.response.PostPageResponse;
+import org.example.community.domain.post.api.dto.response.PostWithStatus;
 import org.example.community.domain.post.comment.repository.CommentRepository;
 import org.example.community.domain.post.postLike.PostLike;
 import org.example.community.domain.post.postLike.repository.PostLikeRepository;
@@ -74,44 +74,25 @@ public class PostService {
 
         // cursor 파싱 (최초 요청이면 null)
         CursorInfo cursorInfo = CursorInfo.from(cursor, sort);
-
-        // 정렬 기준
-        Comparator<Post> comparator = switch (sort) {
-            case "latest" -> Comparator.comparing(Post::getCreatedAt).reversed()
-                    .thenComparing(Comparator.comparing(Post::getId).reversed());
-            case "oldest" -> Comparator.comparing(Post::getCreatedAt)
-                    .thenComparing(Post::getId);
-            case "popular" -> Comparator.comparingInt(
-                            (Post post) -> findPostStatusByPostId(post.getId()).getLikeCount())
-                    .reversed()
-                    .thenComparing(Comparator.comparing(Post::getId).reversed());
-            default -> throw new CustomException(ErrorCode.INVALID_SORT);
-        };
-
-        // 전체 조회 → 정렬 → cursor 이후 필터 → limit+1개 조회
-        List<Post> posts = postRepository.findAll()
-                .stream()
-                .sorted(comparator)
-                .filter(post -> isAfterCursor(post, cursorInfo, sort))
-                .limit(limit + 1) // hasNext 여부 확인 위해 + 1
-                .toList();
+        List<PostWithStatus> posts = postRepository.findPostsWithCursor(sort, cursorInfo, limit + 1);
 
         // 다음 페이지 존재 여부 확인
         boolean hasNext = posts.size() > limit;
-        List<Post> result = hasNext ? posts.subList(0, limit) : posts;
+        List<PostWithStatus> result = hasNext ? posts.subList(0, limit) : posts; // List<E> subList(int fromIndex, int toIndex);
 
-        // 다음 cursor 생성
         String nextCursor = hasNext
                 ? sort.equals("popular")
                 ? CursorInfo.encode(
-                findPostStatusByPostId(result.get(result.size() - 1).getId()).getLikeCount(),
-                result.get(result.size() - 1).getId())
-                : CursorInfo.encode(result.get(result.size() - 1).getCreatedAt(), result.get(result.size() - 1).getId())
+                result.get(result.size() - 1).postStatus().getLikeCount(),
+                result.get(result.size() - 1).post().getId())
+                : CursorInfo.encode(
+                        result.get(result.size() - 1).post().getCreatedAt(),
+                        result.get(result.size() - 1).post().getId())
                 : null;
 
         return PostPageResponse.of(
                 result.stream()
-                        .map(post -> PostListResponse.of(post, findPostStatusByPostId(post.getId())))
+                        .map(pw -> PostListResponse.of(pw.post(), pw.postStatus()))
                         .toList(),
                 nextCursor,
                 hasNext
@@ -119,7 +100,7 @@ public class PostService {
     }
 
     // 게시글 상세 조회
-    public PostDetailResponse getPost(Long postId) {
+    public PostDetailResponse getPostDetail(Long postId) {
         Post post = findPostById(postId);
         PostStatus postStatus = findPostStatusByPostId(postId);
 
@@ -210,26 +191,5 @@ public class PostService {
     private PostStatus findPostStatusByPostId(Long postId) {
         return postStatusRepository.findPostStatusByPostId(postId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_POST));
-    }
-
-    // 커서 이후 데이터 있는지 확인
-    private boolean isAfterCursor(Post post, CursorInfo cursorInfo, String sort) {
-        if (cursorInfo == null) {
-            return true;
-        }
-        PostStatus postStatus = findPostStatusByPostId(post.getId());
-
-        return switch (sort) {
-            case "latest" -> post.getCreatedAt().isBefore(cursorInfo.getCreatedAt()) ||
-                    (post.getCreatedAt().isEqual(cursorInfo.getCreatedAt()) &&
-                            post.getId() < cursorInfo.getId());
-            case "oldest" -> post.getCreatedAt().isAfter(cursorInfo.getCreatedAt()) ||
-                    (post.getCreatedAt().isEqual(cursorInfo.getCreatedAt()) &&
-                            post.getId() > cursorInfo.getId());
-            case "popular" -> postStatus.getLikeCount() < cursorInfo.getLikeCount() ||
-                    (postStatus.getLikeCount() == cursorInfo.getLikeCount() &&
-                            post.getId() < cursorInfo.getId());
-            default -> throw new CustomException(ErrorCode.INVALID_SORT);
-        };
     }
 }
