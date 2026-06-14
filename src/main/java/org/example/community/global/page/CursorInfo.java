@@ -11,10 +11,10 @@ import org.example.community.global.exception.ErrorCode;
 @Getter
 public class CursorInfo {
     private final LocalDateTime createdAt;  // latest, oldest용
-    private final Long likeCount;           // popular용
+    private final Integer likeCount;           // popular용
     private final Long id;
 
-    private CursorInfo(LocalDateTime createdAt, Long likeCount, Long id) {
+    private CursorInfo(LocalDateTime createdAt, Integer likeCount, Long id) {
         this.createdAt = createdAt;
         this.likeCount = likeCount;
         this.id = id;
@@ -32,7 +32,7 @@ public class CursorInfo {
 
             // 좋아요순
             if (sort.equals("popular")) {
-                return new CursorInfo(null, Long.valueOf(parts[0]), Long.valueOf(parts[1]));
+                return new CursorInfo(null, Integer.parseInt(parts[0]), Long.valueOf(parts[1]));
             }
 
             // 최신순/오래된순

@@ -54,23 +54,13 @@ public class CommentService {
 
     // 댓글 조회
     public CommentPageResponse getComments(Long postId, String sort, String cursor, int limit) {
+        if (!sort.equals("latest") && !sort.equals("oldest")) {
+            throw new CustomException(ErrorCode.INVALID_SORT);
+        }
+
         CursorInfo cursorInfo = CursorInfo.from(cursor, sort);
 
-        Comparator<Comment> comparator = switch (sort) {
-            case "latest" -> Comparator.comparing(Comment::getCreatedAt).reversed()
-                    .thenComparing(Comparator.comparing(Comment::getId).reversed());
-            case "oldest" -> Comparator.comparing(Comment::getCreatedAt)
-                    .thenComparing(Comparator.comparing(Comment::getId));
-            default -> throw new CustomException(ErrorCode.INVALID_SORT);
-        };
-
-        // fetch join으로 변경 — User 별도 조회 없음
-        List<Comment> comments = commentRepository.findByPostIdWithUser(postId)
-                .stream()
-                .sorted(comparator)
-                .filter(comment -> isAfterCursor(comment, cursorInfo, sort))
-                .limit(limit + 1)
-                .toList();
+        List<Comment> comments = commentRepository.findCommentsWithCursor(postId, sort, cursorInfo, limit + 1);
 
         boolean hasNext = comments.size() > limit;
         List<Comment> result = hasNext ? comments.subList(0, limit) : comments;
@@ -85,7 +75,7 @@ public class CommentService {
                 result.stream()
                         .map(comment -> CommentDetailResponse.from(
                                 comment,
-                                // comment.getUser()가 이미 로딩된 상태 — 추가 쿼리 없음
+                                // fetchJoin으로 이미 로딩된 상태 — 추가 쿼리 없음
                                 comment.getUser() != null
                                         ? comment.getUser().getNickname()
                                         : "탈퇴한 사용자"
@@ -134,22 +124,6 @@ public class CommentService {
     private Post findPostById(Long postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_POST));
-    }
-
-    private boolean isAfterCursor(Comment comment, CursorInfo cursorInfo, String sort) {
-        if (cursorInfo == null) {
-            return true;
-        }
-
-        return switch (sort) {
-            case "latest" -> comment.getCreatedAt().isBefore(cursorInfo.getCreatedAt()) ||
-                    (comment.getCreatedAt().isEqual(cursorInfo.getCreatedAt()) &&
-                            comment.getId() < cursorInfo.getId());
-            case "oldest" -> comment.getCreatedAt().isAfter(cursorInfo.getCreatedAt()) ||
-                    (comment.getCreatedAt().isEqual(cursorInfo.getCreatedAt()) &&
-                            comment.getId() > cursorInfo.getId());
-            default -> throw new CustomException(ErrorCode.INVALID_SORT);
-        };
     }
 
     private User findUserById(Long userId) {
