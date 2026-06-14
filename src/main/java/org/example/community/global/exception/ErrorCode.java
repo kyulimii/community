@@ -31,6 +31,7 @@ public enum ErrorCode {
     IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 처리 중 오류가 발생했습니다."),
     IMAGE_TOO_LARGE(HttpStatus.BAD_REQUEST, "이미지 크기는 5MB 이하여야 합니다."),
     IMAGE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "이미지 파일만 업로드 가능합니다."),
+    FILE_DELETE_FAILED(HttpStatus.BAD_REQUEST, "이미지 삭제 중 오류가 발생했습니다."),
 
     // ------- COMMENT --------
     NOT_FOUND_COMMENT(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");

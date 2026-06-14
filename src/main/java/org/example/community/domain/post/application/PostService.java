@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.example.community.domain.image.Image;
+import org.example.community.domain.image.application.ImageService;
 import org.example.community.domain.image.repository.ImageRepository;
 import org.example.community.domain.post.Post;
 import org.example.community.domain.post.api.dto.request.PostRequest;
@@ -38,24 +39,22 @@ public class PostService {
     private final PostStatusRepository postStatusRepository;
     private final ViewCountBuffer viewCountBuffer;
     private final ImageRepository imageRepository;
+    private final ImageService imageService;
 
     // 게시글 작성
     @Transactional
     public Long createPost(Long userId, PostRequest postRequest) {
         User user = findUserById(userId);
 
-//        String image = (postImage != null && !postImage.isEmpty())
-//                ? fileService.uploadFile(postImage)
-//                : null;
-
-        Image image = imageRepository.findByJpgPath(postRequest.postImage())
+        Image image = imageRepository.findById(postRequest.imageId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
 
         image.updateImageType("POST");
+
         Post post = Post.builder()
                 .title(postRequest.title())
                 .content(postRequest.content())
-                .postImage(postRequest.postImage())
+                .postImage(image.getJpgPath())
                 .user(user)
                 .build();
         postRepository.save(post);
@@ -138,11 +137,15 @@ public class PostService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-//        String image = (postImage != null && !postImage.isEmpty())
-//                ? fileService.uploadFile(postImage)
-//                : post.getPostImage();
+        Image image = imageRepository.findById(postRequest.imageId())
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
 
-        post.update(postRequest.title(), postRequest.content(), postRequest.postImage());
+        if (image.getImageType() != null) {
+            throw new CustomException(ErrorCode.IMAGE_UPLOAD_FAILED);
+        }
+        post.update(postRequest.title(), postRequest.content(), image.getJpgPath());
+        image.updateImageType("POST");
+
         postRepository.save(post);
     }
 
@@ -157,6 +160,7 @@ public class PostService {
 
         commentRepository.deleteByPostId(postId);
         postLikeRepository.deleteByPostId(postId);
+        imageService.deleteImage(post.getPostImage());
 
         postRepository.deleteById(postId);
     }

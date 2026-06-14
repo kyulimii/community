@@ -4,6 +4,7 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.example.community.domain.auth.repository.RefreshTokenRepository;
 import org.example.community.domain.image.Image;
+import org.example.community.domain.image.application.ImageService;
 import org.example.community.domain.image.repository.ImageRepository;
 import org.example.community.domain.post.comment.repository.CommentRepository;
 import org.example.community.domain.post.postLike.repository.PostLikeRepository;
@@ -30,6 +31,7 @@ public class UserService {
     private final PostLikeRepository postLikeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final ImageRepository imageRepository;
+    private final ImageService imageService;
 
     // 회원가입
     @Transactional
@@ -43,14 +45,7 @@ public class UserService {
         // 비밀번호, 비밀번호 확인 검증
         validatePassword(userCreateRequest.password(), userCreateRequest.checkPassword());
 
-        // 사진 있을 때만 업로드
-//        String profileImagePath = null;
-//        if (profileImage != null && !profileImage.isEmpty()) {
-//            imageValidator.validate(profileImage);
-//            profileImagePath = fileService.uploadFile(profileImage);
-//        }
-
-        Image image = imageRepository.findByJpgPath(userCreateRequest.profileImage())
+        Image image = imageRepository.findById(userCreateRequest.imageId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
 
         image.updateImageType("USER");
@@ -59,7 +54,7 @@ public class UserService {
                 .email(userCreateRequest.email())
                 .password(userCreateRequest.password())
                 .nickname(userCreateRequest.nickname())
-                .profileImage(userCreateRequest.profileImage())
+                .profileImage(image.getJpgPath())
                 .build();
 
         userRepository.save(user);
@@ -70,12 +65,14 @@ public class UserService {
     @Transactional
     public void deleteUser(Long loginUserId) {
         findUserById(loginUserId);
+        User user = findUserById(loginUserId);
 
         // 회원과 연결된 객체 삭제
         postRepository.deleteByUserId(loginUserId);
         commentRepository.deleteByUserId(loginUserId);
         postLikeRepository.deleteByUserId(loginUserId);
         refreshTokenRepository.deleteByUserId(loginUserId);
+        imageService.deleteImage(user.getProfileImage());
 
         userRepository.deleteById(loginUserId);
     }
@@ -117,13 +114,15 @@ public class UserService {
             validateNicknameDuplication(nickname);
         }
 
-//        String imageUrl = user.getProfileImage();
-//        if (profileImage != null && !profileImage.isEmpty()) {
-//            imageValidator.validate(profileImage);
-//            imageUrl = fileService.uploadFile(profileImage);
-//        }
+        Image image = imageRepository.findById(userUpdateRequest.imageId())
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
 
-        user.updateUserInfo(nickname, userUpdateRequest.profileImage());
+        if (image.getImageType() != null) {
+            throw new CustomException(ErrorCode.IMAGE_UPLOAD_FAILED);
+        }
+        user.updateUserInfo(nickname, image.getJpgPath());
+        image.updateImageType("USER");
+
         userRepository.save(user);
     }
 
