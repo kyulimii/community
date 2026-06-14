@@ -15,6 +15,7 @@ import org.example.community.domain.user.api.dto.request.UserPasswordUpdateReque
 import org.example.community.domain.user.api.dto.request.UserUpdateRequest;
 import org.example.community.domain.user.api.dto.response.UserInfoResponse;
 import org.example.community.domain.user.repository.UserRepository;
+import org.example.community.global.security.PasswordEncoder;
 import org.example.community.global.exception.CustomException;
 import org.example.community.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final ImageRepository imageRepository;
     private final ImageService imageService;
+    private final PasswordEncoder passwordEncoder;
 
     // 회원가입
     @Transactional
@@ -52,7 +54,7 @@ public class UserService {
 
         User user = User.builder()
                 .email(userCreateRequest.email())
-                .password(userCreateRequest.password())
+                .password(passwordEncoder.encode(userCreateRequest.password()))
                 .nickname(userCreateRequest.nickname())
                 .profileImage(image.getJpgPath())
                 .build();

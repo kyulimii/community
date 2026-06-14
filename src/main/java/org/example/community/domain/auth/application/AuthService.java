@@ -14,6 +14,7 @@ import org.example.community.global.exception.CustomException;
 import org.example.community.global.exception.ErrorCode;
 import org.example.community.global.jwt.JwtProvider;
 import org.example.community.global.jwt.TokenInfo;
+import org.example.community.global.security.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtProperties jwtProperties;
+    private final PasswordEncoder passwordEncoder;
 
     // 로그인
     @Transactional
@@ -32,7 +34,7 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_USER));
 
-        if (!user.matchPassword(password)) {
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new CustomException(ErrorCode.MISMATCH_LOGIN);
         }
 
