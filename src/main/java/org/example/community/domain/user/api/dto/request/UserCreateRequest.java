@@ -34,6 +34,6 @@ public record UserCreateRequest(
         )
         String nickname,
 
-        String profileImage
+        Long imageId
 ) {
 }

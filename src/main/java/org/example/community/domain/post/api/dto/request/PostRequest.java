@@ -13,6 +13,6 @@ public record PostRequest(
         @NotBlank(message = ConstraintConstants.POST_BLANK_MESSAGE)
         String content,
 
-        String postImage
+        Long imageId
 ) {
 }
