@@ -49,6 +49,9 @@ dependencies {
     // Image Processing
     implementation "com.sksamuel.scrimage:scrimage-core:4.1.0"
     implementation "com.sksamuel.scrimage:scrimage-webp:4.1.0"
+
+    // BCrypt
+    implementation 'at.favre.lib:bcrypt:0.10.2'
 }
 
 tasks.named('test') {
