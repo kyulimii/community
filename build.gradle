@@ -10,7 +10,7 @@ description = 'community'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -45,6 +45,13 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // Image Processing
+    implementation "com.sksamuel.scrimage:scrimage-core:4.1.0"
+    implementation "com.sksamuel.scrimage:scrimage-webp:4.1.0"
+
+    // BCrypt
+    implementation 'at.favre.lib:bcrypt:0.10.2'
 }
 
 tasks.named('test') {

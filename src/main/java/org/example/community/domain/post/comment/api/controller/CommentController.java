@@ -1,12 +1,13 @@
 package org.example.community.domain.post.comment.api.controller;
 
 import jakarta.validation.Valid;
+import java.net.URI;
 import lombok.RequiredArgsConstructor;
-import org.example.community.domain.post.comment.api.dto.CommentPageResponse;
-import org.example.community.domain.post.comment.api.dto.CommentRequestDto;
+import org.example.community.domain.post.comment.api.dto.request.CommentRequest;
+import org.example.community.domain.post.comment.api.dto.response.CommentPageResponse;
 import org.example.community.domain.post.comment.application.CommentService;
 import org.example.community.global.resolver.LoginUser;
-import org.springframework.http.HttpStatus;
+import org.example.community.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,40 +28,43 @@ public class CommentController {
 
     // 댓글 작성
     @PostMapping
-    public ResponseEntity<Void> createComment(@LoginUser Long loginUserId,
-                                              @PathVariable Long postId,
-                                              @RequestBody @Valid CommentRequestDto commentRequestDto) {
-        commentService.createComment(loginUserId, postId, commentRequestDto);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    public ResponseEntity<ApiResponse<Void>> createComment(@LoginUser Long loginUserId,
+                                                           @PathVariable Long postId,
+                                                           @RequestBody @Valid CommentRequest commentRequest) {
+        Long id = commentService.createComment(loginUserId, postId, commentRequest);
+        return ResponseEntity.created(URI.create("/comments/" + id))
+                .body(null);
     }
 
     // 댓글 조회
     @GetMapping
-    public ResponseEntity<CommentPageResponse> getComments(@PathVariable Long postId,
-                                                           @RequestParam(defaultValue = "latest") String sort,
-                                                           @RequestParam(required = false) String cursor,
-                                                           @RequestParam(defaultValue = "10") int limit) {
-        return ResponseEntity.ok(commentService.getComments(postId, sort, cursor, limit));
+    public ResponseEntity<ApiResponse<CommentPageResponse>> getComments(@PathVariable Long postId,
+                                                                        @RequestParam(defaultValue = "latest") String sort,
+                                                                        @RequestParam(required = false) String cursor,
+                                                                        @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity
+                .ok(ApiResponse.ok(commentService.getComments(postId, sort, cursor, limit)));
     }
 
     // 댓글 수정
     @PutMapping("/{commentId}")
-    public ResponseEntity<Void> updateComment(@LoginUser Long loginUserId,
-                                              @PathVariable Long postId,
-                                              @PathVariable Long commentId,
-                                              @RequestBody @Valid CommentRequestDto commentRequestDto) {
-        commentService.updateComment(loginUserId, postId, commentId, commentRequestDto);
-        return ResponseEntity.status(HttpStatus.OK).build();
+    public ResponseEntity<ApiResponse<Void>> updateComment(@LoginUser Long loginUserId,
+                                                           @PathVariable Long postId,
+                                                           @PathVariable Long commentId,
+                                                           @RequestBody @Valid CommentRequest commentRequest) {
+        commentService.updateComment(loginUserId, postId, commentId, commentRequest);
+        return ResponseEntity
+                .ok(ApiResponse.ok(null));
     }
 
 
     // 댓글 삭제
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<Void> deleteComment(@LoginUser Long loginUserId,
-                                              @PathVariable Long postId,
-                                              @PathVariable Long commentId) {
+    public ResponseEntity<ApiResponse<Void>> deleteComment(@LoginUser Long loginUserId,
+                                                           @PathVariable Long postId,
+                                                           @PathVariable Long commentId) {
         commentService.deleteComment(loginUserId, postId, commentId);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        return ResponseEntity
+                .ok(ApiResponse.ok(null));
     }
-
 }

@@ -1,7 +1,5 @@
 package org.example.community.global.exception;
 
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,21 +11,35 @@ public class CustomRestControllerAdvice {
 
     // @Valid 처리
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> responseValidation(MethodArgumentNotValidException e) {
-        Map<String, String> error = new HashMap<>();
+    public ResponseEntity<ApiErrorResponse> responseValidation(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(FieldError::getDefaultMessage)
+                .findFirst()
+                .orElse("유효하지 않은 입력입니다.");
 
-        e.getAllErrors().forEach(
-                // 필드와 메시지 반환
-                c -> error.put(((FieldError) c).getField(), c.getDefaultMessage())
-        );
-        return ResponseEntity.badRequest().body(error);
+        return ResponseEntity
+                .badRequest()
+                .body(ApiErrorResponse.of("INVALID_INPUT", message));
     }
 
     // CustomException 처리
     @ExceptionHandler(CustomException.class)
-    public ResponseEntity<Map<String, String>> handleCustomException(CustomException e) {
-        Map<String, String> error = new HashMap<>();
-        error.put("message", e.getErrorCode().getMessage());
-        return ResponseEntity.status(e.getErrorCode().getHttpStatus()).body(error);
+    public ResponseEntity<ApiErrorResponse> handleCustomException(CustomException e) {
+        ErrorCode errorCode = e.getErrorCode();
+        String code = mapToFeCode(errorCode);
+
+        return ResponseEntity
+                .status(errorCode.getHttpStatus())
+                .body(ApiErrorResponse.of(code, errorCode.getMessage()));
+    }
+
+    private String mapToFeCode(ErrorCode errorCode) {
+        return switch (errorCode) {
+            case DUPLICATION_EMAIL -> "ALREADY_EXIST_EMAIL";
+            case DUPLICATION_NICKNAME -> "ALREADY_EXIST_NICKNAME";
+            default -> errorCode.name();
+        };
     }
 }

@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class ImageValidator {
 
     private static final long MAX_SIZE = 5 * 1024 * 1024;  // 5MB
-    private static final List<String> ALLOWED_TYPES = List.of("image/jpeg", "image/png", "image/gif");
+    private static final List<String> ALLOWED_TYPES = List.of("image/jpeg", "image/png", "image/webp", "multipart/form-data");
 
     public void validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -22,14 +22,6 @@ public class ImageValidator {
         }
         if (!ALLOWED_TYPES.contains(file.getContentType())) {
             throw new CustomException(ErrorCode.IMAGE_INVALID_TYPE);
-        }
-    }
-
-    public byte[] extractBytes(MultipartFile file) {
-        try {
-            return file.getBytes();
-        } catch (IOException e) {
-            throw new CustomException(ErrorCode.IMAGE_UPLOAD_FAILED);
         }
     }
 }

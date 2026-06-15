@@ -16,6 +16,9 @@ public enum ErrorCode {
     MISMATCH_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호가 다릅니다."),
     DUPLICATION_EMAIL(HttpStatus.BAD_REQUEST, "중복된 이메일입니다."),
     DUPLICATION_NICKNAME(HttpStatus.BAD_REQUEST, "중복된 닉네임입니다."),
+    ALREADY_EXIST_EMAIL(HttpStatus.BAD_REQUEST, "이미 사용 중인 이메일입니다."),
+    ALREADY_EXIST_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다."),
+    INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값을 확인해주세요."),
 
     // ------- POST --------
     NOT_FOUND_POST(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
@@ -26,10 +29,12 @@ public enum ErrorCode {
     NOT_LIKED(HttpStatus.BAD_REQUEST, "좋아요를 누르지 않았습니다."),
 
     // ------- IMAGE --------
+    NOT_FOUND_IMAGE(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."),
     IMAGE_EMPTY(HttpStatus.BAD_REQUEST, "프로필 사진을 추가해주세요."),
     IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 처리 중 오류가 발생했습니다."),
     IMAGE_TOO_LARGE(HttpStatus.BAD_REQUEST, "이미지 크기는 5MB 이하여야 합니다."),
     IMAGE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "이미지 파일만 업로드 가능합니다."),
+    FILE_DELETE_FAILED(HttpStatus.BAD_REQUEST, "이미지 삭제 중 오류가 발생했습니다."),
 
     // ------- COMMENT --------
     NOT_FOUND_COMMENT(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");

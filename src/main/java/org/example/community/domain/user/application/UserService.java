@@ -3,22 +3,23 @@ package org.example.community.domain.user.application;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.example.community.domain.auth.repository.RefreshTokenRepository;
-import org.example.community.domain.image.application.ImageValidator;
-import org.example.community.domain.image.application.FileService;
+import org.example.community.domain.image.ProfileImage;
+import org.example.community.domain.image.application.ProfileImageService;
+import org.example.community.domain.image.repository.ProfileImageRepository;
 import org.example.community.domain.post.comment.repository.CommentRepository;
 import org.example.community.domain.post.postLike.repository.PostLikeRepository;
 import org.example.community.domain.post.repository.PostRepository;
 import org.example.community.domain.user.User;
-import org.example.community.domain.user.api.dto.request.UserCreateRequestDto;
-import org.example.community.domain.user.api.dto.request.UserPasswordUpdateRequestDto;
-import org.example.community.domain.user.api.dto.response.UserInfoDto;
-import org.example.community.domain.user.api.dto.response.UserUpdateRequestDto;
+import org.example.community.domain.user.api.dto.request.UserCreateRequest;
+import org.example.community.domain.user.api.dto.request.UserPasswordUpdateRequest;
+import org.example.community.domain.user.api.dto.request.UserUpdateRequest;
+import org.example.community.domain.user.api.dto.response.UserInfoResponse;
 import org.example.community.domain.user.repository.UserRepository;
+import org.example.community.global.security.PasswordEncoder;
 import org.example.community.global.exception.CustomException;
 import org.example.community.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -26,52 +27,51 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final ImageValidator imageValidator;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final FileService fileService;
+    private final ProfileImageRepository profileImageRepository;
+    private final ProfileImageService profileImageService;
+    private final PasswordEncoder passwordEncoder;
 
     // 회원가입
     @Transactional
-    public void signup(UserCreateRequestDto userCreateRequestDto, MultipartFile profileImage) {
-        // 이메일 중복 검사
-        validateEmailDuplication(userCreateRequestDto.getEmail());
+    public Long signup(UserCreateRequest userCreateRequest) {
+        validateEmailDuplication(userCreateRequest.email());
+        validateNicknameDuplication(userCreateRequest.nickname());
+        validatePassword(userCreateRequest.password(), userCreateRequest.checkPassword());
 
-        // 닉네임 중복 검사
-        validateNicknameDuplication(userCreateRequestDto.getNickname());
-
-        // 비밀번호, 비밀번호 확인 검증
-        validatePassword(userCreateRequestDto.getPassword(), userCreateRequestDto.getCheckPassword());
-
-        // 사진 있을 때만 업로드
-        String profileImagePath = null;
-        if (profileImage != null && !profileImage.isEmpty()) {
-            imageValidator.validate(profileImage);
-            profileImagePath = fileService.uploadFile(profileImage);
-        }
+        String profileImageUrl = userCreateRequest.profileImageUrl();
 
         User user = User.builder()
-                .email(userCreateRequestDto.getEmail())
-                .password(userCreateRequestDto.getPassword())
-                .nickname(userCreateRequestDto.getNickname())
-                .profileImage(profileImagePath)
+                .email(userCreateRequest.email())
+                .password(passwordEncoder.encode(userCreateRequest.password()))
+                .nickname(userCreateRequest.nickname())
+                .profileImage(profileImageUrl != null ? profileImageUrl : "")
                 .build();
 
+        if (profileImageUrl != null) {
+            ProfileImage profileImage = profileImageRepository
+                    .findByJpgPath(profileImageUrl)
+                    .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+            profileImage.assignToUser(user);
+        }
+
         userRepository.save(user);
+        return user.getId();
     }
 
     // 회원탈퇴
     @Transactional
     public void deleteUser(Long loginUserId) {
-        findUserById(loginUserId);
+        User user = findUserById(loginUserId);
 
-        // 회원과 연결된 객체 삭제
         postRepository.deleteByUserId(loginUserId);
         commentRepository.deleteByUserId(loginUserId);
         postLikeRepository.deleteByUserId(loginUserId);
         refreshTokenRepository.deleteByUserId(loginUserId);
+        profileImageService.deleteImage(user.getProfileImage());
 
         userRepository.deleteById(loginUserId);
     }
@@ -90,44 +90,47 @@ public class UserService {
         }
     }
 
+    // 내 정보 조회 (/users/me)
+    public UserInfoResponse getMyInfo(Long loginUserId) {
+        return UserInfoResponse.from(findUserById(loginUserId));
+    }
+
     // 회원 정보 조회
-    public UserInfoDto getUserInfo(Long userId, Long loginUserId) {
+    public UserInfoResponse getUserInfo(Long userId, Long loginUserId) {
         validateLogin(userId, loginUserId);
-        return UserInfoDto.from(findUserById(userId));
+        return UserInfoResponse.from(findUserById(userId));
     }
 
     // 회원 정보 수정 - 닉네임, 프로필 사진
     @Transactional
-    public void updateUserInfo(Long userId, Long loginUserId, UserUpdateRequestDto userUpdateRequestDto,
-                               MultipartFile profileImage) {
+    public void updateUserInfo(Long userId, Long loginUserId, UserUpdateRequest userUpdateRequest) {
         validateLogin(userId, loginUserId);
 
         User user = findUserById(userId);
-        String nickname = (userUpdateRequestDto != null) ? userUpdateRequestDto.getNickname() : user.getNickname();
+        String nickname = userUpdateRequest.nickname();
 
-        if (userUpdateRequestDto != null && !nickname.equals(user.getNickname())) {
+        if (!nickname.equals(user.getNickname())) {
             validateNicknameDuplication(nickname);
         }
 
-        String imageUrl = user.getProfileImage();
-        if (profileImage != null && !profileImage.isEmpty()) {
-            imageValidator.validate(profileImage);
-            imageUrl = fileService.uploadFile(profileImage);
-        }
+        profileImageService.deleteImage(user.getProfileImage());
+        ProfileImage newImage = profileImageRepository.findByJpgPath(userUpdateRequest.profileImageUrl())
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+        newImage.assignToUser(user);
 
-        user.updateUserInfo(nickname, imageUrl);
+        user.updateUserInfo(nickname, userUpdateRequest.profileImageUrl());
         userRepository.save(user);
     }
 
     // 회원 비밀번호 수정
     @Transactional
     public void updateUserPassword(Long userId, Long loginUserId,
-                                   UserPasswordUpdateRequestDto userPasswordUpdateRequestDto) {
+                                   UserPasswordUpdateRequest userPasswordUpdateRequest) {
         validateLogin(userId, loginUserId);
         User user = findUserById(userId);
-        matchPassword(user, userPasswordUpdateRequestDto.getCurrentPassword());
-        validatePassword(userPasswordUpdateRequestDto.getPassword(), userPasswordUpdateRequestDto.getCheckPassword());
-        user.updatePassword(userPasswordUpdateRequestDto.getPassword());
+        matchPassword(user, userPasswordUpdateRequest.currentPassword());
+        validatePassword(userPasswordUpdateRequest.password(), userPasswordUpdateRequest.checkPassword());
+        user.updatePassword(userPasswordUpdateRequest.password());
         userRepository.save(user);
     }
 
@@ -137,7 +140,7 @@ public class UserService {
     }
 
     private void validatePassword(String password, String checkPassword) {
-        if (!password.equals(checkPassword)) {
+        if (checkPassword != null && !password.equals(checkPassword)) {
             throw new CustomException(ErrorCode.MISMATCH_PASSWORD);
         }
     }
@@ -149,7 +152,7 @@ public class UserService {
     }
 
     private void matchPassword(User user, String currentPassword) {
-        if (!user.getPassword().equals(currentPassword)) {
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             throw new CustomException(ErrorCode.MISMATCH_PASSWORD);
         }
     }
