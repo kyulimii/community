@@ -38,6 +38,7 @@ out/
 
 ### application.yml ###
 /**/main/resources/application-local.yml
+/**/main/resources/application-dev.yml
 
 ### DS_Store ###
 .DS_Store

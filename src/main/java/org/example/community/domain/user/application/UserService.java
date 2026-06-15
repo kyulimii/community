@@ -42,17 +42,21 @@ public class UserService {
         validateNicknameDuplication(userCreateRequest.nickname());
         validatePassword(userCreateRequest.password(), userCreateRequest.checkPassword());
 
-        ProfileImage profileImage = profileImageRepository
-                .findByJpgPath(userCreateRequest.profileImage())
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+        String profileImageUrl = userCreateRequest.profileImageUrl();
 
         User user = User.builder()
                 .email(userCreateRequest.email())
                 .password(passwordEncoder.encode(userCreateRequest.password()))
                 .nickname(userCreateRequest.nickname())
-                .profileImage(userCreateRequest.profileImage())
+                .profileImage(profileImageUrl != null ? profileImageUrl : "")
                 .build();
-        profileImage.assignToUser(user);
+
+        if (profileImageUrl != null) {
+            ProfileImage profileImage = profileImageRepository
+                    .findByJpgPath(profileImageUrl)
+                    .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+            profileImage.assignToUser(user);
+        }
 
         userRepository.save(user);
         return user.getId();
@@ -110,11 +114,11 @@ public class UserService {
         }
 
         profileImageService.deleteImage(user.getProfileImage());
-        ProfileImage newImage = profileImageRepository.findByJpgPath(userUpdateRequest.profileImage())
+        ProfileImage newImage = profileImageRepository.findByJpgPath(userUpdateRequest.profileImageUrl())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
         newImage.assignToUser(user);
 
-        user.updateUserInfo(nickname, userUpdateRequest.profileImage());
+        user.updateUserInfo(nickname, userUpdateRequest.profileImageUrl());
         userRepository.save(user);
     }
 
@@ -136,7 +140,7 @@ public class UserService {
     }
 
     private void validatePassword(String password, String checkPassword) {
-        if (!password.equals(checkPassword)) {
+        if (checkPassword != null && !password.equals(checkPassword)) {
             throw new CustomException(ErrorCode.MISMATCH_PASSWORD);
         }
     }
@@ -148,7 +152,7 @@ public class UserService {
     }
 
     private void matchPassword(User user, String currentPassword) {
-        if (!user.getPassword().equals(currentPassword)) {
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             throw new CustomException(ErrorCode.MISMATCH_PASSWORD);
         }
     }

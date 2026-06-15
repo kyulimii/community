@@ -1,7 +1,5 @@
 package org.example.community.global.exception;
 
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -23,15 +21,25 @@ public class CustomRestControllerAdvice {
 
         return ResponseEntity
                 .badRequest()
-                        .body(ApiErrorResponse.of(message));
+                .body(ApiErrorResponse.of("INVALID_INPUT", message));
     }
 
     // CustomException 처리
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ApiErrorResponse> handleCustomException(CustomException e) {
+        ErrorCode errorCode = e.getErrorCode();
+        String code = mapToFeCode(errorCode);
 
         return ResponseEntity
-                .status(e.getErrorCode().getHttpStatus())
-                .body(ApiErrorResponse.of(e.getErrorCode().getMessage()));
+                .status(errorCode.getHttpStatus())
+                .body(ApiErrorResponse.of(code, errorCode.getMessage()));
+    }
+
+    private String mapToFeCode(ErrorCode errorCode) {
+        return switch (errorCode) {
+            case DUPLICATION_EMAIL -> "ALREADY_EXIST_EMAIL";
+            case DUPLICATION_NICKNAME -> "ALREADY_EXIST_NICKNAME";
+            default -> errorCode.name();
+        };
     }
 }

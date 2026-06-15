@@ -27,15 +27,15 @@ public class ImageController {
 
     @PostMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProfileImageResponse>> uploadProfileImage(
-            @RequestPart("image") MultipartFile multipartFile) {
+            @RequestPart("profileImage") MultipartFile multipartFile) {
         ProfileImageResponse profileImageResponse = profileImageService.uploadFile(multipartFile);
         return ResponseEntity.created(URI.create("/uploads/" + profileImageResponse.id()))
                 .body(ApiResponse.created(profileImageResponse));
     }
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/attach-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<PostImageResponse>> uploadFile(
-            @RequestPart("image") MultipartFile multipartFile) {
+            @RequestPart("postFile") MultipartFile multipartFile) {
         PostImageResponse postImageResponse = postImageService.uploadFile(multipartFile);
         return ResponseEntity.created(URI.create("/uploads/" + postImageResponse.id()))
                 .body(ApiResponse.created(postImageResponse));
@@ -54,7 +54,7 @@ public class ImageController {
                 .body(ApiResponse.created(profileImageResponse));
     }
 
-    @PutMapping(value = "/{imageId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "attach-file/{imageId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<PostImageResponse>> updateFile(@PathVariable Long imageId,
                                                                      @RequestPart("image") MultipartFile multipartFile) {
         PostImageResponse postImageResponse = postImageService.updateImage(imageId, multipartFile);

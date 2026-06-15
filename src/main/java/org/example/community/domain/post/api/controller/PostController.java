@@ -3,6 +3,7 @@ package org.example.community.domain.post.api.controller;
 import jakarta.validation.Valid;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
+import org.example.community.domain.image.api.dto.response.PostCreateResponse;
 import org.example.community.domain.post.api.dto.request.PostRequest;
 import org.example.community.domain.post.api.dto.response.PostDetailResponse;
 import org.example.community.domain.post.api.dto.response.PostPageResponse;
@@ -29,14 +30,14 @@ public class PostController {
 
     // 게시글 작성
     @PostMapping
-    public ResponseEntity<ApiResponse<Void>> createPost(
+    public ResponseEntity<ApiResponse<PostCreateResponse>> createPost(
             @LoginUser Long loginUserId,
             @RequestBody @Valid PostRequest postRequest
     ) {
-        Long id = postService.createPost(loginUserId, postRequest);
+        PostCreateResponse post = postService.createPost(loginUserId, postRequest);
         return ResponseEntity
-                .created(URI.create("/posts/" + id))
-                .body(ApiResponse.created(null));
+                .created(URI.create("/posts/" + post.postId()))
+                .body(ApiResponse.created(post));
     }
 
     // 게시글 목록 조회
@@ -52,9 +53,10 @@ public class PostController {
 
     // 게시글 상세 조회
     @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponse<PostDetailResponse>> getPostDetail(@PathVariable Long postId) {
+    public ResponseEntity<ApiResponse<PostDetailResponse>> getPostDetail(@LoginUser Long userId,
+                                                                         @PathVariable Long postId) {
         return ResponseEntity
-                .ok(ApiResponse.ok(postService.getPostDetail(postId)));
+                .ok(ApiResponse.ok(postService.getPostDetail(userId, postId)));
     }
 
     // 게시글 수정

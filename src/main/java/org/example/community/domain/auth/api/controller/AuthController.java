@@ -47,7 +47,17 @@ public class AuthController {
                 .sameSite("Strict")
                 .build();
 
+        ResponseCookie accessCookie = ResponseCookie
+                .from("accessToken", result.response().accessToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(jwtProperties.getAccessTokenExpSeconds())
+                .sameSite("Strict")
+                .build();
+
         httpResponse.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+        httpResponse.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
 
         return ResponseEntity
                 .ok(ApiResponse.ok(result.response()));

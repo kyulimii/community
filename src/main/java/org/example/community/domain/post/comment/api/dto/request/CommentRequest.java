@@ -5,6 +5,6 @@ import org.example.community.global.exception.ConstraintConstants;
 
 public record CommentRequest(
         @NotBlank(message = ConstraintConstants.CONTENT_BLANK_MESSAGE)
-        String content
+        String commentContent
 ) {
 }
