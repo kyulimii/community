@@ -4,7 +4,7 @@ import org.example.community.domain.image.ProfileImage;
 
 public record ProfileImageResponse(
         Long id,
-        String jpgPath,
+        String profileImageUrl,
         String webpPath,
         String originalName
 ) {

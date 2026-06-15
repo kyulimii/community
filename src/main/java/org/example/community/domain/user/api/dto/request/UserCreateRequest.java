@@ -19,7 +19,7 @@ public record UserCreateRequest(
         )
         String password,
 
-        @NotBlank(message = ConstraintConstants.CHECK_PASSWORD_BLANK_MESSAGE)
+//        @NotBlank(message = ConstraintConstants.CHECK_PASSWORD_BLANK_MESSAGE)
         @Pattern(
                 regexp = ConstraintConstants.PASSWORD_FORMAT,
                 message = ConstraintConstants.PASSWORD_FORMAT_MESSAGE
@@ -34,6 +34,6 @@ public record UserCreateRequest(
         )
         String nickname,
 
-        String profileImage
+        String profileImageUrl
 ) {
 }

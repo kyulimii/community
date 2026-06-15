@@ -23,7 +23,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String uri = request.getRequestURI();
         String method = request.getMethod();
 
-        // POST /users (회원가입) 만
+        // CORS preflight는 항상 통과
+        if (method.equals("OPTIONS")) {
+            return true;
+        }
+
+        // POST /users (회원가입)
         if (uri.equals("/users") && method.equals("POST")) {
             return true;
         }
@@ -34,14 +39,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return true;
         }
         // /auth (로그인, 로그아웃)
-        if (uri.equals("/auth")) {
+        if (uri.startsWith("/auth")) {
             return true;
         }
-        // 토큰 재발급 허용
-        if (uri.equals("/auth/refresh") && method.equals("POST")) {
-            return true;
-        }
-
         if (uri.startsWith("/uploads") && method.equals("POST")) {
             return true;
         }

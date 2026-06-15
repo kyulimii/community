@@ -1,3 +1,4 @@
+
 package org.example.community.domain.post.api.dto.response;
 
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ public record PostDetailResponse(
         String content,
         String postImage,
         Long authorId,
+        boolean isLike,
         int likeCount,
         int viewCount,
         int commentCount,
@@ -17,13 +19,14 @@ public record PostDetailResponse(
         LocalDateTime updatedAt
 ) {
 
-    public static PostDetailResponse of(Post post, PostStatus postStatus) {
+    public static PostDetailResponse of(Post post, PostStatus postStatus, boolean isLike) {
         return new PostDetailResponse(
                 post.getId(),
                 post.getTitle(),
                 post.getContent(),
                 post.getPostImage(),
                 post.getUser().getId(),
+                isLike,
                 postStatus.getLikeCount(),
                 postStatus.getViewCount(),
                 postStatus.getCommentCount(),

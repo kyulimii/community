@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
         boolean isSuccess,
-        T body,
+        T data,
         LocalDateTime timestamp
 ) {
 

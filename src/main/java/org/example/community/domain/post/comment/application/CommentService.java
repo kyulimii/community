@@ -39,7 +39,7 @@ public class CommentService {
         PostStatus postStatus = findPostStatusByPostId(postId);
 
         Comment comment = Comment.builder()
-                .content(commentRequest.content())
+                .content(commentRequest.commentContent())
                 .user(user)
                 .post(post)
                 .build();
@@ -91,7 +91,7 @@ public class CommentService {
     public void updateComment(Long userId, Long postId, Long commentId, CommentRequest commentRequest) {
         Comment comment = findAndValidate(userId, postId, commentId);
 
-        comment.update(commentRequest.content());
+        comment.update(commentRequest.commentContent());
         commentRepository.save(comment);
     }
 

@@ -6,10 +6,11 @@ import java.time.LocalDateTime;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiErrorResponse(
         boolean isSuccess,
+        String code,
         String message,
         LocalDateTime timestamp
 ) {
-    public static ApiErrorResponse of(String message) {
-        return new ApiErrorResponse(false, message, LocalDateTime.now());
+    public static ApiErrorResponse of(String code, String message) {
+        return new ApiErrorResponse(false, code, message, LocalDateTime.now());
     }
 }

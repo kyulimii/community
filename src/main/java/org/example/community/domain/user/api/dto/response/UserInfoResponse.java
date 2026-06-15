@@ -6,7 +6,7 @@ public record UserInfoResponse(
         Long id,
         String email,
         String nickname,
-        String profileImage
+        String profileImageUrl
 ) {
 
     public static UserInfoResponse from(User user) {

@@ -16,6 +16,9 @@ public enum ErrorCode {
     MISMATCH_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호가 다릅니다."),
     DUPLICATION_EMAIL(HttpStatus.BAD_REQUEST, "중복된 이메일입니다."),
     DUPLICATION_NICKNAME(HttpStatus.BAD_REQUEST, "중복된 닉네임입니다."),
+    ALREADY_EXIST_EMAIL(HttpStatus.BAD_REQUEST, "이미 사용 중인 이메일입니다."),
+    ALREADY_EXIST_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다."),
+    INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값을 확인해주세요."),
 
     // ------- POST --------
     NOT_FOUND_POST(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),

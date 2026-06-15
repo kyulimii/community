@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.example.community.domain.image.PostImage;
+import org.example.community.domain.image.api.dto.response.PostCreateResponse;
 import org.example.community.domain.image.application.PostImageService;
 import org.example.community.domain.image.repository.PostImageRepository;
 import org.example.community.domain.post.Post;
@@ -43,16 +44,16 @@ public class PostService {
 
     // 게시글 작성
     @Transactional
-    public Long createPost(Long userId, PostRequest postRequest) {
+    public PostCreateResponse createPost(Long userId, PostRequest postRequest) {
         User user = findUserById(userId);
 
-        PostImage postImage = postImageRepository.findByJpgPath(postRequest.postImage())
+        PostImage postImage = postImageRepository.findByJpgPath(postRequest.postImageUrl())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
 
         Post post = Post.builder()
                 .title(postRequest.title())
                 .content(postRequest.content())
-                .postImage(postRequest.postImage())
+                .postImage(postRequest.postImageUrl())
                 .user(user)
                 .build();
         postRepository.save(post);
@@ -63,7 +64,7 @@ public class PostService {
                 .build();
         postStatusRepository.save(postStatus);
 
-        return post.getId();
+        return new PostCreateResponse(post.getId());
     }
 
     // 최초 요청: GET /posts?sort=latest&limit=10
@@ -97,13 +98,15 @@ public class PostService {
     }
 
     // 게시글 상세 조회
-    public PostDetailResponse getPostDetail(Long postId) {
+    public PostDetailResponse getPostDetail(Long userId, Long postId) {
+        User user = findUserById(userId);
         Post post = findPostById(postId);
         PostStatus postStatus = findPostStatusByPostId(postId);
+        boolean isLike = postLikeRepository.existsByUserIdAndPostId(userId, postId);
 
         viewCountBuffer.increment(postId);
 
-        return PostDetailResponse.of(post, postStatus);
+        return PostDetailResponse.of(post, postStatus, isLike);
     }
 
     // 게시글 수정
@@ -116,10 +119,10 @@ public class PostService {
         }
 
         imageService.deleteImage(post.getPostImage());
-        PostImage newImage = postImageRepository.findByJpgPath(postRequest.postImage())
+        PostImage newImage = postImageRepository.findByJpgPath(postRequest.postImageUrl())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
 
-        post.update(postRequest.title(), postRequest.content(), postRequest.postImage());
+        post.update(postRequest.title(), postRequest.content(), postRequest.postImageUrl());
         postRepository.save(post);
     }
 
