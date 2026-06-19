@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.example.community.domain.image.repository.PostImageRepository;
 import org.example.community.global.exception.CustomException;
 import org.example.community.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,8 +15,6 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class LocalFileService implements FileService {
-
-    private final PostImageRepository postImageRepository;
 
     @Value("${file.upload.dir}")
     private String uploadDir;
@@ -41,7 +38,8 @@ public class LocalFileService implements FileService {
 
     @Override
     public void deleteFile(String filePath) {
-        Path fsPath = Paths.get(filePath.startsWith("/") ? filePath.substring(1) : filePath);
+        Path fsPath = Paths.get(uploadDir).toAbsolutePath().normalize()
+                .resolve(filePath.startsWith("/uploads/") ? filePath.substring("/uploads/".length()) : filePath);
 
         try {
             if (!Files.deleteIfExists(fsPath)) {

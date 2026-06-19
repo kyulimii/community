@@ -5,21 +5,26 @@ import org.example.community.domain.post.Post;
 import org.example.community.domain.post.postStatus.PostStatus;
 
 public record PostListResponse(
-        // content, postImage 제외
         Long id,
         String title,
-        Long authorId,
+        AuthorInfo author,
         int likeCount,
         int viewCount,
         int commentCount,
         LocalDateTime createdAt
 ) {
 
+    public record AuthorInfo(Long id, String nickname, String profileImageUrl) {}
+
     public static PostListResponse of(Post post, PostStatus postStatus) {
         return new PostListResponse(
                 post.getId(),
                 post.getTitle(),
-                post.getUser().getId(),
+                new AuthorInfo(
+                        post.getUser().getId(),
+                        post.getUser().getNickname(),
+                        post.getUser().getProfileImage()
+                ),
                 postStatus.getLikeCount(),
                 postStatus.getViewCount(),
                 postStatus.getCommentCount(),

@@ -3,7 +3,6 @@ package org.example.community.domain.post.repository;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +10,7 @@ import org.example.community.domain.post.Post;
 import org.example.community.domain.post.QPost;
 import org.example.community.domain.post.api.dto.response.PostWithStatus;
 import org.example.community.domain.post.postStatus.QPostStatus;
+import org.example.community.domain.user.QUser;
 import org.example.community.global.page.CursorInfo;
 
 @RequiredArgsConstructor
@@ -22,11 +22,12 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
     public List<PostWithStatus> findPostsWithCursor(String sort, CursorInfo cursorInfo, int limit) {
         QPost qPost = QPost.post;
         QPostStatus qPostStatus = QPostStatus.postStatus;
-
+        QUser qUser = QUser.user;
 
         return queryFactory
                 .select(Projections.constructor(PostWithStatus.class, qPost, qPostStatus))
                 .from(qPost)
+                .join(qPost.user, qUser).fetchJoin()
                 .join(qPostStatus).on(qPostStatus.post.eq(qPost))
                 .where(buildCursorCondition(qPost, qPostStatus, sort, cursorInfo))
                 .orderBy(buildOrderBy(qPost, qPostStatus, sort))

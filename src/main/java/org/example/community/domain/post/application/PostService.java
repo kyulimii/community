@@ -99,14 +99,13 @@ public class PostService {
 
     // 게시글 상세 조회
     public PostDetailResponse getPostDetail(Long userId, Long postId) {
-        User user = findUserById(userId);
         Post post = findPostById(postId);
         PostStatus postStatus = findPostStatusByPostId(postId);
         boolean isLike = postLikeRepository.existsByUserIdAndPostId(userId, postId);
 
         viewCountBuffer.increment(postId);
 
-        return PostDetailResponse.of(post, postStatus, isLike);
+        return PostDetailResponse.of(post, post.getUser(), postStatus, isLike);
     }
 
     // 게시글 수정
@@ -118,11 +117,19 @@ public class PostService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        imageService.deleteImage(post.getPostImage());
-        PostImage newImage = postImageRepository.findByJpgPath(postRequest.postImageUrl())
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+        String oldImagePath = post.getPostImage();
+        String newImageUrl = postRequest.postImageUrl();
 
-        post.update(postRequest.title(), postRequest.content(), postRequest.postImageUrl());
+        if (newImageUrl != null && !newImageUrl.equals(oldImagePath)) {
+            postImageRepository.findByJpgPath(newImageUrl)
+                    .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+            if (oldImagePath != null) {
+                imageService.deleteImage(oldImagePath);
+            }
+        }
+
+        post.update(postRequest.title(), postRequest.content(),
+                newImageUrl != null ? newImageUrl : oldImagePath);
         postRepository.save(post);
     }
 
@@ -137,6 +144,7 @@ public class PostService {
 
         commentRepository.deleteByPostId(postId);
         postLikeRepository.deleteByPostId(postId);
+        postStatusRepository.deleteByPostId(postId);
         imageService.deleteImage(post.getPostImage());
 
         postRepository.deleteById(postId);

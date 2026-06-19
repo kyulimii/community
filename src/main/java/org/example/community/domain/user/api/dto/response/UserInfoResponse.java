@@ -3,7 +3,7 @@ package org.example.community.domain.user.api.dto.response;
 import org.example.community.domain.user.User;
 
 public record UserInfoResponse(
-        Long id,
+        Long userId,
         String email,
         String nickname,
         String profileImageUrl
