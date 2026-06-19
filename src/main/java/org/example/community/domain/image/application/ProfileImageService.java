@@ -43,7 +43,6 @@ public class ProfileImageService {
                     .originalName(originalName)
                     .jpgPath(jpgPath)
                     .webpPath(webpPath)
-//                    .imageType(null)
                     .build();
 
             profileImageRepository.save(image);

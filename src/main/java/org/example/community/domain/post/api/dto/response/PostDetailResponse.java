@@ -1,4 +1,3 @@
-
 package org.example.community.domain.post.api.dto.response;
 
 import java.time.LocalDateTime;

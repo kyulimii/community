@@ -6,7 +6,6 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.example.community.domain.post.Post;
 import org.example.community.domain.post.QPost;
 import org.example.community.domain.post.api.dto.response.PostWithStatus;
 import org.example.community.domain.post.postStatus.QPostStatus;
