@@ -113,12 +113,21 @@ public class UserService {
             validateNicknameDuplication(nickname);
         }
 
-        profileImageService.deleteImage(user.getProfileImage());
-        ProfileImage newImage = profileImageRepository.findByJpgPath(userUpdateRequest.profileImageUrl())
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
-        newImage.assignToUser(user);
+        String newImageUrl = userUpdateRequest.profileImageUrl();
+        String currentImageUrl = user.getProfileImage();
 
-        user.updateUserInfo(nickname, userUpdateRequest.profileImageUrl());
+        if (newImageUrl != null && !newImageUrl.equals(currentImageUrl)) {
+            if (currentImageUrl != null && !currentImageUrl.isEmpty()) {
+                profileImageService.deleteImage(currentImageUrl);
+            }
+            ProfileImage newImage = profileImageRepository.findByJpgPath(newImageUrl)
+                    .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+            newImage.assignToUser(user);
+            user.updateUserInfo(nickname, newImageUrl);
+        } else {
+            user.updateUserInfo(nickname, currentImageUrl);
+        }
+
         userRepository.save(user);
     }
 
@@ -130,7 +139,7 @@ public class UserService {
         User user = findUserById(userId);
         matchPassword(user, userPasswordUpdateRequest.currentPassword());
         validatePassword(userPasswordUpdateRequest.password(), userPasswordUpdateRequest.checkPassword());
-        user.updatePassword(userPasswordUpdateRequest.password());
+        user.updatePassword(passwordEncoder.encode(userPasswordUpdateRequest.password()));
         userRepository.save(user);
     }
 

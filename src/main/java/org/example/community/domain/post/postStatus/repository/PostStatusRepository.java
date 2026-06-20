@@ -16,4 +16,9 @@ public interface PostStatusRepository extends JpaRepository<PostStatus, Long> {
     void incrementViewCount(@Param("postId") Long postId, @Param("count") int count);
 
     Optional<PostStatus> findPostStatusByPostId(Long postId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM PostStatus p WHERE p.post.id = :postId")
+    void deleteByPostId(@Param("postId") Long postId);
 }

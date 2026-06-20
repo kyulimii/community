@@ -41,7 +41,7 @@ public class ImageController {
                 .body(ApiResponse.created(postImageResponse));
     }
 
-    @GetMapping("/{imageId}")
+    @GetMapping("/meta/{imageId}")
     public ResponseEntity<ApiResponse<PostImageResponse>> getImage(@PathVariable Long imageId) {
         return ResponseEntity.ok(ApiResponse.ok(postImageService.getImage(imageId)));
     }

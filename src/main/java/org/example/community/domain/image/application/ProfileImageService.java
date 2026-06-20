@@ -31,16 +31,18 @@ public class ProfileImageService {
 
         // 3. Image 저장, 임시 파일 꼭 삭제
         String originalName = multipartFile.getOriginalFilename();
+        String baseName = (originalName != null && originalName.contains("."))
+                ? originalName.substring(0, originalName.lastIndexOf('.'))
+                : originalName;
 
         try {
-            String jpgPath = fileService.uploadFile(convertedImage.jpgFile(), originalName + ".jpg");
-            String webpPath = fileService.uploadFile(convertedImage.webpFile(), originalName + ".webp");
+            String jpgPath = fileService.uploadFile(convertedImage.jpgFile(), baseName + ".jpg");
+            String webpPath = fileService.uploadFile(convertedImage.webpFile(), baseName + ".webp");
 
             ProfileImage image = ProfileImage.builder()
                     .originalName(originalName)
                     .jpgPath(jpgPath)
                     .webpPath(webpPath)
-//                    .imageType(null)
                     .build();
 
             profileImageRepository.save(image);
