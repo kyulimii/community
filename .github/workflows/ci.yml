@@ -2,7 +2,7 @@ name: Community CI
 
 on:
   push:
-    branches: ['feature/*', 'refactor/*']
+    branches: ['feature/**', 'refactor/**']
 
 env:
   IMAGE_NAME: community
