@@ -28,7 +28,7 @@ public class JwtProvider {
     @PostConstruct
     public void init() {
         this.secretKey = Keys.hmacShaKeyFor(
-                jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8)
+                jwtProperties.secret().getBytes(StandardCharsets.UTF_8)
         );
     }
 
@@ -50,12 +50,12 @@ public class JwtProvider {
     public String createAccessToken(Long userId, String email, String nickname) {
         return createToken("access", userId,
                 Map.of("email", email, "nickname", nickname),
-                jwtProperties.getAccessTokenExpSeconds());
+                jwtProperties.accessTokenExpSeconds());
     }
 
     public String createRefreshToken(Long userId) {
         return createToken("refresh", userId, Map.of(),
-                jwtProperties.getRefreshTokenExpSeconds());
+                jwtProperties.refreshTokenExpSeconds());
     }
 
     public Claims parseToken(String token) {
@@ -105,6 +105,6 @@ public class JwtProvider {
     }
 
     public long getAccessTokenValidityInMilliseconds() {
-        return jwtProperties.getAccessTokenExpSeconds() * 1000;
+        return jwtProperties.accessTokenExpSeconds() * 1000;
     }
 }

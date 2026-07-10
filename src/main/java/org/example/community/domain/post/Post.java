@@ -29,7 +29,7 @@ public class Post extends BaseEntity {
     @Column(name = "content", nullable = false)
     private String content;
 
-    @Column(name = "post_image")
+    @Column(name = "post_image", nullable = true)
     private String postImage;
 
     @ManyToOne(fetch = FetchType.LAZY)

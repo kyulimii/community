@@ -42,21 +42,15 @@ public class UserService {
         validateNicknameDuplication(userCreateRequest.nickname());
         validatePassword(userCreateRequest.password(), userCreateRequest.checkPassword());
 
-        String profileImageUrl = userCreateRequest.profileImageUrl();
+        ProfileImage profileImage = profileImageRepository.findById(userCreateRequest.imageId())
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
 
         User user = User.builder()
                 .email(userCreateRequest.email())
                 .password(passwordEncoder.encode(userCreateRequest.password()))
                 .nickname(userCreateRequest.nickname())
-                .profileImage(profileImageUrl != null ? profileImageUrl : "")
+                .profileImage(profileImage.getJpgPath())
                 .build();
-
-        if (profileImageUrl != null) {
-            ProfileImage profileImage = profileImageRepository
-                    .findByJpgPath(profileImageUrl)
-                    .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
-            profileImage.assignToUser(user);
-        }
 
         userRepository.save(user);
         return user.getId();

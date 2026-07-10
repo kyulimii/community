@@ -47,8 +47,10 @@ public class PostService {
     public PostCreateResponse createPost(Long userId, PostRequest postRequest) {
         User user = findUserById(userId);
 
+//        PostImage postImage = postImageRepository.findByJpgPath(postRequest.postImageUrl())
+//                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
         PostImage postImage = postImageRepository.findByJpgPath(postRequest.postImageUrl())
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+                .orElse(null);
 
         Post post = Post.builder()
                 .title(postRequest.title())
@@ -57,7 +59,8 @@ public class PostService {
                 .user(user)
                 .build();
         postRepository.save(post);
-        postImage.assignToPost(post);
+        if (postImage != null)
+            postImage.assignToPost(post);
 
         PostStatus postStatus = PostStatus.builder()
                 .post(post)
@@ -130,7 +133,6 @@ public class PostService {
 
         post.update(postRequest.title(), postRequest.content(),
                 newImageUrl != null ? newImageUrl : oldImagePath);
-        postRepository.save(post);
     }
 
     // 게시글 삭제

@@ -3,6 +3,7 @@ package org.example.community.domain.post.api.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.example.community.global.exception.ConstraintConstants;
+import org.jspecify.annotations.Nullable;
 
 public record PostRequest(
 
@@ -13,6 +14,7 @@ public record PostRequest(
         @NotBlank(message = ConstraintConstants.POST_BLANK_MESSAGE)
         String content,
 
+        @Nullable
         String postImageUrl
 ) {
 }

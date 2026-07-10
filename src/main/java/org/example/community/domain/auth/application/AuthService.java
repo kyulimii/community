@@ -49,7 +49,7 @@ public class AuthService {
                 RefreshToken.builder()
                         .token(refreshToken)
                         .userId(user.getId())
-                        .expiresAt(LocalDateTime.now().plusSeconds(jwtProperties.getRefreshTokenExpSeconds()))
+                        .expiresAt(LocalDateTime.now().plusSeconds(jwtProperties.refreshTokenExpSeconds()))
                         .build()
         );
 

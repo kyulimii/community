@@ -26,7 +26,7 @@ public class ImageConverter {
             File webpFile = convertToWebp(inputImage);
             return new ConvertedImage(jpgFile, webpFile);
         } catch (IOException e) {
-            throw new CustomException(ErrorCode.IMAGE_UPLOAD_FAILED);
+            throw new CustomException(ErrorCode.IMAGE_UPLOAD_FAILED_Convert);
         }
     }
 
