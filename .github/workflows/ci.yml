@@ -10,6 +10,19 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root1234
+          MYSQL_DATABASE: community
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -36,6 +49,15 @@ jobs:
 
       - name: Build and Test with Gradle
         run: ./gradlew build
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/community
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: root1234
+          SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_ACCESS_TOKEN_EXP_SECONDS: ${{ secrets.JWT_ACCESS_TOKEN_EXP_SECONDS }}
+          JWT_REFRESH_TOKEN_EXP_SECONDS: ${{ secrets.JWT_REFRESH_TOKEN_EXP_SECONDS }}
+          FILE_UPLOAD_DIR: ${{ secrets.FILE_UPLOAD_DIR }}
 
       - name: Login to private registry
         uses: docker/login-action@v3
