@@ -79,10 +79,10 @@ jobs:
               "$FULL_IMAGE"
 
             # 3. 헬스체크 - 최대 30초(2초 x 15회) 대기.
-            #    spring-boot-starter-auth 의존성과 /auth/health 노출 설정이 되어있어야 함.
+            #    AuthController의 GET /auth/health가 평문 "ok"를 반환함 (LoginCheckFilter에서 인증 예외 처리됨).
             SUCCESS=false
             for i in $(seq 1 15); do
-              if curl -sf "http://localhost:${TEMP_PORT}/auth/health" | grep -q '"status":"UP"'; then
+              if curl -sf "http://localhost:${TEMP_PORT}/auth/health" | grep -q 'ok'; then
                 SUCCESS=true
                 break
               fi
@@ -110,7 +110,7 @@ jobs:
 
             # 6. 정식 포트로의 최종 기동 확인
             sleep 3
-            if ! curl -sf "http://localhost:${APP_PORT}/auth/health" | grep -q '"status":"UP"'; then
+            if ! curl -sf "http://localhost:${APP_PORT}/auth/health" | grep -q 'ok'; then
               echo "최종 기동 확인 실패 - 수동 확인이 필요합니다"
               docker logs "$CONTAINER_NAME" --tail 100
               exit 1
