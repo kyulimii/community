@@ -51,7 +51,7 @@ jobs:
           script: |
             set -e
 
-            REGISTRY="${{ secrets.DOCKER_REGISTRY }}"
+            REGISTRY="${{ secrets.REGSTRY_HOST }}"
             IMAGE_TAG="${{ steps.tag.outputs.tag }}"
             FULL_IMAGE="$REGISTRY/${{ env.IMAGE_NAME }}:$IMAGE_TAG"
             CONTAINER_NAME="${{ env.CONTAINER_NAME }}"
