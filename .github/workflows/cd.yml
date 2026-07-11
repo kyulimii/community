@@ -108,9 +108,18 @@ jobs:
               -p "${APP_PORT}:${APP_PORT}" \
               "$FULL_IMAGE"
 
-            # 6. 정식 포트로의 최종 기동 확인
-            sleep 3
-            if ! curl -sf "http://localhost:${APP_PORT}/auth/health" | grep -q 'ok'; then
+            # 6. 정식 포트로의 최종 기동 확인 - 새 컨테이너라 처음부터 다시 부팅하므로 3번과 동일하게 재시도
+            #    포트 체크도 최대 30초(2초×15회) 재시도 -> 앱이 정상적으로 뜨는 중이라면 통과
+            FINAL_SUCCESS=false
+            for i in $(seq 1 15); do
+              if curl -sf "http://localhost:${APP_PORT}/auth/health" | grep -q 'ok'; then
+                FINAL_SUCCESS=true
+                break
+              fi
+              sleep 2
+            done
+
+            if [ "$FINAL_SUCCESS" != "true" ]; then
               echo "최종 기동 확인 실패 - 수동 확인이 필요합니다"
               docker logs "$CONTAINER_NAME" --tail 100
               exit 1
