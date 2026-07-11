@@ -15,7 +15,7 @@ env:
   CONTAINER_NAME: community
   APP_PORT: 8080          # 컨테이너 최종 서비스 포트 - 실제 값으로 수정
   TEMP_PORT: 18080        # 헬스체크용 임시 포트 - 실제 값으로 수정, 사용 중이지 않은 포트인지 확인 필요
-  ENV_FILE_PATH: /home/ec2-user/community/.env   # EC2에 미리 배치해둔 환경변수 파일 경로 - 실제 경로로 수정
+  ENV_FILE_PATH: ${{ secrets.ENV_FILE_PATH }}   # EC2에 미리 배치해둔 환경변수 파일 경로 - 실제 경로로 수정
 
 jobs:
   deploy:
