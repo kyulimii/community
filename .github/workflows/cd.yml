@@ -1,131 +1,131 @@
-name: Community CD
-
-on:
-  workflow_call:
-    inputs:
-      image_tag:
-        description: '배포할 이미지 태그 (비워두면 현재 커밋의 short SHA 사용)'
-        required: false
-        type: string
-        default: ''
-  workflow_dispatch:
-    inputs:
-      image_tag:
-        description: '배포할 이미지 태그 (비워두면 현재 커밋의 short SHA 사용)'
-        required: false
-        default: ''
-
-env:
-  IMAGE_NAME: community
-  CONTAINER_NAME: community
-  APP_PORT: 8080          # 컨테이너 최종 서비스 포트 - 실제 값으로 수정
-  TEMP_PORT: 18080        # 헬스체크용 임시 포트 - 실제 값으로 수정, 사용 중이지 않은 포트인지 확인 필요
-  ENV_FILE_PATH: ${{ secrets.ENV_FILE_PATH }}   # EC2에 미리 배치해둔 환경변수 파일 경로 - 실제 경로로 수정
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      # ci.yml에서 workflow_call로 호출될 때는 build job이 계산한 image_tag가 그대로 넘어옴.
-      # workflow_dispatch로 수동 실행할 때 값을 비워두면 현재 커밋의 short SHA를 사용.
-      - name: 배포할 이미지 태그 결정
-        id: tag
-        run: |
-          if [ -n "${{ inputs.image_tag }}" ]; then
-            echo "tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: EC2에 SSH 접속하여 배포 스크립트 실행
-        uses: appleboy/ssh-action@v1
-        with:
-          # 프라이빗 서브넷 EC2(BE 컨테이너 실행 대상)의 private IP
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          # 로컬 ssh config의 ProxyJump와 동일한 역할 - 퍼블릭 서브넷 EC2(bastion)를 거쳐서 접속
-          proxy_host: ${{ secrets.BASTION_HOST }}
-          proxy_username: ${{ secrets.BASTION_USER }}
-          proxy_key: ${{ secrets.BASTION_SSH_KEY }}
-          script: |
-            set -e
-
-            REGISTRY="${{ secrets.REGISTRY_HOST }}"
-            IMAGE_TAG="${{ steps.tag.outputs.tag }}"
-            FULL_IMAGE="$REGISTRY/${{ env.IMAGE_NAME }}:$IMAGE_TAG"
-            CONTAINER_NAME="${{ env.CONTAINER_NAME }}"
-            NEW_CONTAINER="${CONTAINER_NAME}-new"
-            APP_PORT="${{ env.APP_PORT }}"
-            TEMP_PORT="${{ env.TEMP_PORT }}"
-            ENV_FILE="${{ env.ENV_FILE_PATH }}"
-
-            # 0. private registry 로그인
-            echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login "$REGISTRY" \
-              -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-
-            # 1. 새 이미지 pull
-            docker pull "$FULL_IMAGE"
-
-            # 2. 새 컨테이너를 임시 포트로 먼저 기동한다.
-            #    기존 컨테이너는 아직 살아있는 상태라 이 시점까지는 서비스 중단이 없다.
-            docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
-            docker run -d \
-              --name "$NEW_CONTAINER" \
-              --network community-net \
-              --env-file "$ENV_FILE" \
-              --restart unless-stopped \
-              -p "${TEMP_PORT}:${APP_PORT}" \
-              "$FULL_IMAGE"
-
-            # 3. 헬스체크 - 최대 30초(2초 x 15회) 대기.
-            #    AuthController의 GET /auth/health가 평문 "ok"를 반환함 (LoginCheckFilter에서 인증 예외 처리됨).
-            SUCCESS=false
-            for i in $(seq 1 15); do
-              if curl -sf "http://localhost:${TEMP_PORT}/auth/health" | grep -q 'ok'; then
-                SUCCESS=true
-                break
-              fi
-              sleep 2
-            done
-
-            # 4. 헬스체크 실패 시 새 컨테이너만 제거하고 배포 중단 (기존 컨테이너는 그대로 유지 -> 롤백 불필요)
-            if [ "$SUCCESS" != "true" ]; then
-              echo "헬스체크 실패 - 새 컨테이너를 제거하고 배포를 중단합니다"
-              docker logs "$NEW_CONTAINER" --tail 100
-              docker rm -f "$NEW_CONTAINER"
-              exit 1
-            fi
-
-            # 5. 헬스체크 통과 - 이 시점에만 기존 컨테이너를 제거하고, 새 이미지를 정식 이름/포트로 재기동한다.
-            docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
-            docker rm -f "$NEW_CONTAINER"
-            docker run -d \
-              --name "$CONTAINER_NAME" \
-              --network community-net \
-              --env-file "$ENV_FILE" \
-              --restart unless-stopped \
-              -p "${APP_PORT}:${APP_PORT}" \
-              "$FULL_IMAGE"
-
-            # 6. 정식 포트로의 최종 기동 확인 - 새 컨테이너라 처음부터 다시 부팅하므로 3번과 동일하게 재시도
-            #    포트 체크도 최대 30초(2초×15회) 재시도 -> 앱이 정상적으로 뜨는 중이라면 통과
-            FINAL_SUCCESS=false
-            for i in $(seq 1 15); do
-              if curl -sf "http://localhost:${APP_PORT}/auth/health" | grep -q 'ok'; then
-                FINAL_SUCCESS=true
-                break
-              fi
-              sleep 2
-            done
-
-            if [ "$FINAL_SUCCESS" != "true" ]; then
-              echo "최종 기동 확인 실패 - 수동 확인이 필요합니다"
-              docker logs "$CONTAINER_NAME" --tail 100
-              exit 1
-            fi
-
-            # 7. 사용하지 않는 이미지 정리 (디스크 용량 관리)
-            docker image prune -f
-
-            echo "배포 완료: $FULL_IMAGE"
+#name: Community CD
+#
+#on:
+#  workflow_call:
+#    inputs:
+#      image_tag:
+#        description: '배포할 이미지 태그 (비워두면 현재 커밋의 short SHA 사용)'
+#        required: false
+#        type: string
+#        default: ''
+#  workflow_dispatch:
+#    inputs:
+#      image_tag:
+#        description: '배포할 이미지 태그 (비워두면 현재 커밋의 short SHA 사용)'
+#        required: false
+#        default: ''
+#
+#env:
+#  IMAGE_NAME: community
+#  CONTAINER_NAME: community
+#  APP_PORT: 8080          # 컨테이너 최종 서비스 포트 - 실제 값으로 수정
+#  TEMP_PORT: 18080        # 헬스체크용 임시 포트 - 실제 값으로 수정, 사용 중이지 않은 포트인지 확인 필요
+#  ENV_FILE_PATH: ${{ secrets.ENV_FILE_PATH }}   # EC2에 미리 배치해둔 환경변수 파일 경로 - 실제 경로로 수정
+#
+#jobs:
+#  deploy:
+#    runs-on: ubuntu-latest
+#    steps:
+#      # ci.yml에서 workflow_call로 호출될 때는 build job이 계산한 image_tag가 그대로 넘어옴.
+#      # workflow_dispatch로 수동 실행할 때 값을 비워두면 현재 커밋의 short SHA를 사용.
+#      - name: 배포할 이미지 태그 결정
+#        id: tag
+#        run: |
+#          if [ -n "${{ inputs.image_tag }}" ]; then
+#            echo "tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+#          else
+#            echo "tag=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+#          fi
+#
+#      - name: EC2에 SSH 접속하여 배포 스크립트 실행
+#        uses: appleboy/ssh-action@v1
+#        with:
+#          # 프라이빗 서브넷 EC2(BE 컨테이너 실행 대상)의 private IP
+#          host: ${{ secrets.EC2_HOST }}
+#          username: ${{ secrets.EC2_USER }}
+#          key: ${{ secrets.EC2_SSH_KEY }}
+#          # 로컬 ssh config의 ProxyJump와 동일한 역할 - 퍼블릭 서브넷 EC2(bastion)를 거쳐서 접속
+#          proxy_host: ${{ secrets.BASTION_HOST }}
+#          proxy_username: ${{ secrets.BASTION_USER }}
+#          proxy_key: ${{ secrets.BASTION_SSH_KEY }}
+#          script: |
+#            set -e
+#
+#            REGISTRY="${{ secrets.REGISTRY_HOST }}"
+#            IMAGE_TAG="${{ steps.tag.outputs.tag }}"
+#            FULL_IMAGE="$REGISTRY/${{ env.IMAGE_NAME }}:$IMAGE_TAG"
+#            CONTAINER_NAME="${{ env.CONTAINER_NAME }}"
+#            NEW_CONTAINER="${CONTAINER_NAME}-new"
+#            APP_PORT="${{ env.APP_PORT }}"
+#            TEMP_PORT="${{ env.TEMP_PORT }}"
+#            ENV_FILE="${{ env.ENV_FILE_PATH }}"
+#
+#            # 0. private registry 로그인
+#            echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login "$REGISTRY" \
+#              -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+#
+#            # 1. 새 이미지 pull
+#            docker pull "$FULL_IMAGE"
+#
+#            # 2. 새 컨테이너를 임시 포트로 먼저 기동한다.
+#            #    기존 컨테이너는 아직 살아있는 상태라 이 시점까지는 서비스 중단이 없다.
+#            docker rm -f "$NEW_CONTAINER" 2>/dev/null || true
+#            docker run -d \
+#              --name "$NEW_CONTAINER" \
+#              --network community-net \
+#              --env-file "$ENV_FILE" \
+#              --restart unless-stopped \
+#              -p "${TEMP_PORT}:${APP_PORT}" \
+#              "$FULL_IMAGE"
+#
+#            # 3. 헬스체크 - 최대 30초(2초 x 15회) 대기.
+#            #    AuthController의 GET /auth/health가 평문 "ok"를 반환함 (LoginCheckFilter에서 인증 예외 처리됨).
+#            SUCCESS=false
+#            for i in $(seq 1 15); do
+#              if curl -sf "http://localhost:${TEMP_PORT}/auth/health" | grep -q 'ok'; then
+#                SUCCESS=true
+#                break
+#              fi
+#              sleep 2
+#            done
+#
+#            # 4. 헬스체크 실패 시 새 컨테이너만 제거하고 배포 중단 (기존 컨테이너는 그대로 유지 -> 롤백 불필요)
+#            if [ "$SUCCESS" != "true" ]; then
+#              echo "헬스체크 실패 - 새 컨테이너를 제거하고 배포를 중단합니다"
+#              docker logs "$NEW_CONTAINER" --tail 100
+#              docker rm -f "$NEW_CONTAINER"
+#              exit 1
+#            fi
+#
+#            # 5. 헬스체크 통과 - 이 시점에만 기존 컨테이너를 제거하고, 새 이미지를 정식 이름/포트로 재기동한다.
+#            docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+#            docker rm -f "$NEW_CONTAINER"
+#            docker run -d \
+#              --name "$CONTAINER_NAME" \
+#              --network community-net \
+#              --env-file "$ENV_FILE" \
+#              --restart unless-stopped \
+#              -p "${APP_PORT}:${APP_PORT}" \
+#              "$FULL_IMAGE"
+#
+#            # 6. 정식 포트로의 최종 기동 확인 - 새 컨테이너라 처음부터 다시 부팅하므로 3번과 동일하게 재시도
+#            #    포트 체크도 최대 30초(2초×15회) 재시도 -> 앱이 정상적으로 뜨는 중이라면 통과
+#            FINAL_SUCCESS=false
+#            for i in $(seq 1 15); do
+#              if curl -sf "http://localhost:${APP_PORT}/auth/health" | grep -q 'ok'; then
+#                FINAL_SUCCESS=true
+#                break
+#              fi
+#              sleep 2
+#            done
+#
+#            if [ "$FINAL_SUCCESS" != "true" ]; then
+#              echo "최종 기동 확인 실패 - 수동 확인이 필요합니다"
+#              docker logs "$CONTAINER_NAME" --tail 100
+#              exit 1
+#            fi
+#
+#            # 7. 사용하지 않는 이미지 정리 (디스크 용량 관리)
+#            docker image prune -f
+#
+#            echo "배포 완료: $FULL_IMAGE"

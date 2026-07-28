@@ -33,12 +33,6 @@ public class AuthController {
     private final JwtProperties jwtProperties;
     private final CookieConfigProperties cookieConfigProperties;
 
-    // 헬스 체크
-    @GetMapping("/health")
-    public ResponseEntity<String> health() {
-        return ResponseEntity.ok("ok");
-    }
-
     // 로그인
     @PostMapping
     public ResponseEntity<ApiResponse<AuthResponse>> login(

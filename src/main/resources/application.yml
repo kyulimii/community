@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: dev
+    active: local
 
   datasource:
     url: ${spring.datasource.url}
@@ -23,3 +23,20 @@ jwt:
 file:
   size: ${image.size}
   upload.dir: ${file.upload.dir}
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+      group:
+        readiness:
+          include: readinessState, db
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  health:
+    db:
+      enabled: true

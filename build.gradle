@@ -52,6 +52,9 @@ dependencies {
 
     // BCrypt
     implementation 'at.favre.lib:bcrypt:0.10.2'
+
+    // actuator
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 }
 
 tasks.named('test') {

@@ -99,9 +99,9 @@ jobs:
         run: |
           echo "이미지 푸시 완료: ${{ steps.meta.outputs.tags }}"
 
-  deploy:
-    needs: build
-    uses: ./.github/workflows/cd.yml
-    with:
-      image_tag: ${{ needs.build.outputs.image_tag }}
-    secrets: inherit
+#  deploy:
+#    needs: build
+#    uses: ./.github/workflows/cd.yml
+#    with:
+#      image_tag: ${{ needs.build.outputs.image_tag }}
+#    secrets: inherit

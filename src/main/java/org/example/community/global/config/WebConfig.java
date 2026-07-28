@@ -42,8 +42,8 @@ public class WebConfig implements WebMvcConfigurer {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-                "http://localhost:8080",
-                "http://127.0.0.1:8080",
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
                 "https://ayla-community.kro.kr"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
