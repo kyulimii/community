@@ -13,7 +13,7 @@ public record PagingRequest(
         Integer limit
 ) {
     public PagingRequest {
-        sort = "latest";
+//        sort = "latest";
         if (limit == null) {
             limit = 10;
         }
