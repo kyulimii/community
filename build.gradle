@@ -53,8 +53,10 @@ dependencies {
     // BCrypt
     implementation 'at.favre.lib:bcrypt:0.10.2'
 
-    // actuator
+    // monitoring
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'net.ttddyy.observation:datasource-micrometer-spring-boot:1.0.5'
 }
 
 tasks.named('test') {

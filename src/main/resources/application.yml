@@ -36,7 +36,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,Prometheus
   health:
     db:
+      enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+server:
+  tomcat:
+    reregistration:
       enabled: true
