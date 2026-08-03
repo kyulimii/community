@@ -21,7 +21,7 @@ jwt:
   refresh-token-exp-seconds: ${jwt.refresh-token-exp-seconds}
 
 file:
-  size: ${image.size}
+  size: ${file.size}
   upload.dir: ${file.upload.dir}
 
 management:
@@ -36,7 +36,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,Prometheus
+        include: health,info,prometheus
   health:
     db:
       enabled: true
@@ -47,5 +47,5 @@ management:
 
 server:
   tomcat:
-    reregistration:
+    mbeanregistry:
       enabled: true
