@@ -44,7 +44,7 @@ public class WebConfig implements WebMvcConfigurer {
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
-                "https://ayla-community.kro.kr"
+                "https://ayla-community.store"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
