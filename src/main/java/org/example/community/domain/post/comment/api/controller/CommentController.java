@@ -6,11 +6,13 @@ import lombok.RequiredArgsConstructor;
 import org.example.community.domain.post.comment.api.dto.request.CommentRequest;
 import org.example.community.domain.post.comment.api.dto.response.CommentPageResponse;
 import org.example.community.domain.post.comment.application.CommentService;
+import org.example.community.global.page.PagingRequest;
 import org.example.community.global.resolver.LoginUser;
 import org.example.community.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -39,11 +41,10 @@ public class CommentController {
     // 댓글 조회
     @GetMapping
     public ResponseEntity<ApiResponse<CommentPageResponse>> getComments(@PathVariable Long postId,
-                                                                        @RequestParam(defaultValue = "latest") String sort,
-                                                                        @RequestParam(required = false) String cursor,
-                                                                        @RequestParam(defaultValue = "10") int limit) {
+                                                                        @ModelAttribute PagingRequest pagingRequest) {
         return ResponseEntity
-                .ok(ApiResponse.ok(commentService.getComments(postId, sort, cursor, limit)));
+                .ok(ApiResponse.ok(commentService.getComments(postId, pagingRequest.sort(), pagingRequest.cursor(),
+                        pagingRequest.limit())));
     }
 
     // 댓글 수정

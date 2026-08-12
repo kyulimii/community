@@ -1,17 +1,12 @@
 package org.example.community.global.config;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
 
-@Getter
-@Setter
-@Configuration
 @ConfigurationProperties(prefix = "jwt")
-public class JwtProperties {
+public record JwtProperties(
 
-    private String secret;
-    private long accessTokenExpSeconds;
-    private long refreshTokenExpSeconds;
+        String secret,
+        long accessTokenExpSeconds,
+        long refreshTokenExpSeconds
+) {
 }

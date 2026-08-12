@@ -6,9 +6,9 @@ import org.example.community.domain.auth.repository.RefreshTokenRepository;
 import org.example.community.domain.image.ProfileImage;
 import org.example.community.domain.image.application.ProfileImageService;
 import org.example.community.domain.image.repository.ProfileImageRepository;
+import org.example.community.domain.post.application.PostService;
 import org.example.community.domain.post.comment.repository.CommentRepository;
 import org.example.community.domain.post.postLike.repository.PostLikeRepository;
-import org.example.community.domain.post.repository.PostRepository;
 import org.example.community.domain.user.User;
 import org.example.community.domain.user.api.dto.request.UserCreateRequest;
 import org.example.community.domain.user.api.dto.request.UserPasswordUpdateRequest;
@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final PostRepository postRepository;
+    private final PostService postService;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -42,21 +42,19 @@ public class UserService {
         validateNicknameDuplication(userCreateRequest.nickname());
         validatePassword(userCreateRequest.password(), userCreateRequest.checkPassword());
 
-        String profileImageUrl = userCreateRequest.profileImageUrl();
+        String profileImagePath = null;
+        if (userCreateRequest.imageId() != null) {
+            ProfileImage profileImage = profileImageRepository.findById(userCreateRequest.imageId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
+            profileImagePath = profileImage.getJpgPath();
+        }
 
         User user = User.builder()
                 .email(userCreateRequest.email())
                 .password(passwordEncoder.encode(userCreateRequest.password()))
                 .nickname(userCreateRequest.nickname())
-                .profileImage(profileImageUrl != null ? profileImageUrl : "")
+                .profileImage(profileImagePath)
                 .build();
-
-        if (profileImageUrl != null) {
-            ProfileImage profileImage = profileImageRepository
-                    .findByJpgPath(profileImageUrl)
-                    .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
-            profileImage.assignToUser(user);
-        }
 
         userRepository.save(user);
         return user.getId();
@@ -67,11 +65,13 @@ public class UserService {
     public void deleteUser(Long loginUserId) {
         User user = findUserById(loginUserId);
 
-        postRepository.deleteByUserId(loginUserId);
+        postService.deleteAllPostsByUser(loginUserId);
         commentRepository.deleteByUserId(loginUserId);
         postLikeRepository.deleteByUserId(loginUserId);
         refreshTokenRepository.deleteByUserId(loginUserId);
-        profileImageService.deleteImage(user.getProfileImage());
+        if (user.getProfileImage() != null) {
+            profileImageService.deleteImage(user.getProfileImage());
+        }
 
         userRepository.deleteById(loginUserId);
     }

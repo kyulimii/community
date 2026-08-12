@@ -1,0 +1,107 @@
+name: Community CI
+
+on:
+  push:
+    branches: ['feature/**', 'refactor/**']
+
+env:
+  IMAGE_NAME: community
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.sha.outputs.short }}
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root1234
+          MYSQL_DATABASE: community
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+#      - name: Gradle Caching
+#        uses: actions/cache@v3
+#        with:
+#          path: |
+#            ~/.gradle/caches
+#            ~/.gradle/wrapper
+#            key: ${{runner.os
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build and Test with Gradle
+        run: ./gradlew build
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/community
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: root1234
+          SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_ACCESS_TOKEN_EXP_SECONDS: ${{ secrets.JWT_ACCESS_TOKEN_EXP_SECONDS }}
+          JWT_REFRESH_TOKEN_EXP_SECONDS: ${{ secrets.JWT_REFRESH_TOKEN_EXP_SECONDS }}
+          FILE_UPLOAD_DIR: ${{ secrets.FILE_UPLOAD_DIR }}
+
+      - name: Login to private registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      # buildx 설정 - --platform 사용 및 GHA 캐시 활용을 위해 필요
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,format=short
+
+      - name: build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 이미지 푸시 완료
+        run: |
+          echo "이미지 푸시 완료: ${{ steps.meta.outputs.tags }}"
+
+#  deploy:
+#    needs: build
+#    uses: ./.github/workflows/cd.yml
+#    with:
+#      image_tag: ${{ needs.build.outputs.image_tag }}
+#    secrets: inherit

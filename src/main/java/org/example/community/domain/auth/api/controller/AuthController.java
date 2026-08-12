@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.community.domain.auth.api.dto.request.AuthRequest;
+import org.example.community.domain.auth.api.dto.request.CookieConfigProperties;
 import org.example.community.domain.auth.api.dto.response.AuthResponse;
 import org.example.community.domain.auth.application.AuthService;
 import org.example.community.domain.auth.application.LoginResult;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +31,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtProperties jwtProperties;
+    private final CookieConfigProperties cookieConfigProperties;
 
     // 로그인
     @PostMapping
@@ -40,20 +43,20 @@ public class AuthController {
 
         ResponseCookie refreshCookie = ResponseCookie
                 .from("refreshToken", result.refreshToken())
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(jwtProperties.getRefreshTokenExpSeconds())
-                .sameSite("Strict")
+                .httpOnly(cookieConfigProperties.httpOnly())
+                .secure(cookieConfigProperties.secure())
+                .path(cookieConfigProperties.path())
+                .maxAge(jwtProperties.refreshTokenExpSeconds())
+                .sameSite(cookieConfigProperties.sameSite())
                 .build();
 
         ResponseCookie accessCookie = ResponseCookie
                 .from("accessToken", result.response().accessToken())
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(jwtProperties.getAccessTokenExpSeconds())
-                .sameSite("Strict")
+                .httpOnly(cookieConfigProperties.httpOnly())
+                .secure(cookieConfigProperties.secure())
+                .path(cookieConfigProperties.path())
+                .maxAge(jwtProperties.accessTokenExpSeconds())
+                .sameSite(cookieConfigProperties.sameSite())
                 .build();
 
         httpResponse.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());

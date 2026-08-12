@@ -72,7 +72,7 @@ public class LoginCheckFilter extends GenericFilterBean {
         if (uri.startsWith("/uploads/") && "GET".equals(method)) return true;
         if ("/uploads".equals(uri) && "POST".equals(method)) return true;
         if ("/uploads/profile-image".equals(uri) && "POST".equals(method)) return true;
-
+        if (uri.startsWith("/actuator/") && "GET".equals(method)) return true;
         return false;
     }
 

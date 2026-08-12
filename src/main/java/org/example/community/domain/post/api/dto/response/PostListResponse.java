@@ -7,6 +7,7 @@ import org.example.community.domain.post.postStatus.PostStatus;
 public record PostListResponse(
         Long id,
         String title,
+        String postImage,
         AuthorInfo author,
         int likeCount,
         int viewCount,
@@ -20,6 +21,7 @@ public record PostListResponse(
         return new PostListResponse(
                 post.getId(),
                 post.getTitle(),
+                post.getPostImage(),
                 new AuthorInfo(
                         post.getUser().getId(),
                         post.getUser().getNickname(),

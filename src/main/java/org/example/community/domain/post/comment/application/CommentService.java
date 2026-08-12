@@ -73,13 +73,7 @@ public class CommentService {
 
         return CommentPageResponse.of(
                 result.stream()
-                        .map(comment -> CommentDetailResponse.from(
-                                comment,
-                                // fetchJoin으로 이미 로딩된 상태 — 추가 쿼리 없음
-                                comment.getUser() != null
-                                        ? comment.getUser().getNickname()
-                                        : "탈퇴한 사용자"
-                        ))
+                        .map(comment -> CommentDetailResponse.from(comment, comment.getUser()))
                         .toList(),
                 nextCursor,
                 hasNext

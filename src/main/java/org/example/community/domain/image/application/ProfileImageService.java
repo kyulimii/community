@@ -71,6 +71,10 @@ public class ProfileImageService {
 
     @Transactional
     public void deleteImage(String imageUrl) {
+        if (imageUrl == null) {
+            return;
+        }
+
         // 1. DB에서 기존 이미지 경로 조회
         ProfileImage image = profileImageRepository.findByJpgPath(imageUrl)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_IMAGE));
