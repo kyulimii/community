@@ -135,6 +135,19 @@ public class PostService {
                 newImageUrl != null ? newImageUrl : oldImagePath);
     }
 
+    // 회원 탈퇴 시 해당 유저의 게시글 전체 삭제 (댓글/좋아요/상태/이미지까지 함께 정리)
+    @Transactional
+    public void deleteAllPostsByUser(Long userId) {
+        List<Post> posts = postRepository.findByUserId(userId);
+        for (Post post : posts) {
+            commentRepository.deleteByPostId(post.getId());
+            postLikeRepository.deleteByPostId(post.getId());
+            postStatusRepository.deleteByPostId(post.getId());
+            imageService.deleteImage(post.getPostImage());
+        }
+        postRepository.deleteByUserId(userId);
+    }
+
     // 게시글 삭제
     @Transactional
     public void deletePost(Long userId, Long postId) {
